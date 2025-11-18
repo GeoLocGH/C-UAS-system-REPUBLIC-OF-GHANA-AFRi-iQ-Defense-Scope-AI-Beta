@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import {
     type Drones,
@@ -169,13 +170,15 @@ function initializeCounterUAS() {
         'b1-turret-01': {
             id: 'b1-turret-01',
             location: { ...BASE_LOCATIONS[0], alt: 10 },
-            status: CounterUASStatus.SCANNING,
+            // FORCED STATE for demonstration: Start by targeting a specific drone
+            status: CounterUASStatus.ENGAGING,
+            currentTargetId: 'ufo_fpv_locked_target',
+            currentTargetInfo: null,
             ammo: 150,
             maxAmmo: 150,
             detectionRadius: 2500,
             engagementRadius: 1200,
-            currentTargetId: null,
-            mode: 'human_in_loop'
+            mode: 'autonomous'
         },
         'b2-turret-01': {
             id: 'b2-turret-01',
@@ -186,7 +189,8 @@ function initializeCounterUAS() {
             detectionRadius: 2500,
             engagementRadius: 1200,
             currentTargetId: null,
-            mode: 'human_in_loop'
+            currentTargetInfo: null,
+            mode: 'autonomous'
         }
     };
 }
@@ -221,6 +225,20 @@ const calculateNewCoords = (lat: number, lon: number, bearing: number, distance:
     return { lat: lat2 * 180 / Math.PI, lon: lon2 * 180 / Math.PI };
 };
 
+const calculateBearing = (p1: {lat: number, lon: number}, p2: {lat: number, lon: number}): number => {
+    const lat1 = p1.lat * Math.PI / 180;
+    const lon1 = p1.lon * Math.PI / 180;
+    const lat2 = p2.lat * Math.PI / 180;
+    const lon2 = p2.lon * Math.PI / 180;
+    const dLon = lon2 - lon1;
+
+    const y = Math.sin(dLon) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+    const brng = Math.atan2(y, x);
+    return (brng * 180 / Math.PI + 360) % 360;
+};
+
+
 function initializeUFOs() {
     const ufoTypes: UFOType[] = ['commercial_jet', 'private_plane', 'helicopter', 'unknown_uav'];
     for (let i = 0; i < 5; i++) {
@@ -237,6 +255,19 @@ function initializeUFOs() {
             heading: Math.random() * 360,
         });
     }
+
+    // Specific FPV drone for C-UAS targeting demonstration
+    ufos.push({
+        id: `ufo_fpv_locked_target`,
+        type: 'fpv_drone',
+        location: {
+            lat: BASE_LOCATIONS[0].lat + 0.009, // Approx 1km North
+            lon: BASE_LOCATIONS[0].lon,
+            alt: 150, // 150m low altitude
+        },
+        speed: 120, // 120 km/h
+        heading: 180, // Heading South, towards the base
+    });
 }
 
 function updateUFOSimulation() {
@@ -282,60 +313,161 @@ const isPointInPolygon = (point: { lat: number; lon: number }, polygon: { lat: n
     return inside;
 };
 
+const calculateThreatScore = (ufo: UnidentifiedFlyingObject, system: CounterUASSystem): number => {
+    const distance = getDistance3D(ufo.location, system.location);
+    
+    // 1. Distance Score (higher is closer)
+    const distanceScore = Math.max(0, 1 - (distance / system.detectionRadius));
+
+    // 2. Speed Score (higher is faster)
+    const MAX_THREAT_SPEED = 200; // km/h, typical for fast FPV drones
+    const speedScore = Math.min(1, ufo.speed / MAX_THREAT_SPEED);
+
+    // 3. Threat Vector Score (higher is more direct towards system)
+    const bearingToSystem = calculateBearing(ufo.location, system.location);
+    const angleDifference = Math.abs(bearingToSystem - ufo.heading);
+    const threatAngle = Math.min(angleDifference, 360 - angleDifference); // Find shortest angle
+    const vectorScore = Math.max(0, 1 - (threatAngle / 180)); // 1 for direct approach, 0 for moving away
+
+    // Combine scores with weighting
+    const threatScore = (distanceScore * 1.5) + (speedScore * 1.0) + (vectorScore * 2.5);
+    
+    return threatScore;
+};
+
 function updateCounterUASSimulation() {
     Object.values(counterUASSystems).forEach(system => {
         if (system.status === 'disabled') return;
 
         const uasLocation = system.location;
 
-        // Handle reloading state
         if (system.status === CounterUASStatus.RELOADING) {
-            // This state is entered below, and has its own timeout to exit.
             return;
         }
-        
-        // Check if current target is still valid (not destroyed or out of range)
+
+        // Update info for current target if it exists and is still valid
         if (system.currentTargetId) {
             const currentTarget = ufos.find(u => u.id === system.currentTargetId);
-            if (!currentTarget || getDistance3D(uasLocation, currentTarget.location) > system.detectionRadius) {
+            const isAlreadyPursuedByDrone = Object.values(drones).some(d => d.interceptTargetId === system.currentTargetId);
+
+            if (!currentTarget) {
+                // Target has been destroyed or removed from simulation.
                 system.currentTargetId = null;
-                // If it was engaging, stop and log it
-                if (system.status === CounterUASStatus.ENGAGING) {
-                     commandLogCallback({
-                        target: system.id, command: 'Target Lost', status: 'Failed',
-                        details: 'Target left engagement radius or was destroyed by other means.'
-                    });
-                }
+                system.currentTargetInfo = null;
                 system.status = CounterUASStatus.SCANNING;
+            } else {
+                const distance = getDistance3D(uasLocation, currentTarget.location);
+
+                if (distance > system.engagementRadius && !isAlreadyPursuedByDrone) {
+                    // Target has escaped the C-UAS engagement range and is not already being pursued.
+                    // Hand off the pursuit to an interceptor drone.
+                    commandLogCallback({
+                        target: system.id,
+                        command: 'Target Escaped',
+                        status: 'Failed',
+                        details: `Target ${currentTarget.id} left engagement radius. Initiating inter-drone pursuit.`
+                    });
+
+                    let closestInterceptor: { id: string; drone: Drone; distance: number } | null = null;
+                    Object.entries(drones).forEach(([id, drone]) => {
+                        if (drone.droneType === 'Interceptor' && (drone.status === DroneStatus.GROUNDED || drone.status === DroneStatus.HOVERING_AT_BASE)) {
+                            const droneDistanceToTarget = getDistance3D(drone.location, currentTarget.location);
+                            if (!closestInterceptor || droneDistanceToTarget < closestInterceptor.distance) {
+                                closestInterceptor = { id, drone, distance: droneDistanceToTarget };
+                            }
+                        }
+                    });
+
+                    if (closestInterceptor) {
+                        const interceptor = closestInterceptor.drone;
+                        interceptor.interceptTargetId = currentTarget.id;
+                         if (interceptor.status === DroneStatus.GROUNDED) {
+                            interceptor.status = DroneStatus.LAUNCHING;
+                        } else {
+                            interceptor.status = DroneStatus.INTERCEPTING;
+                        }
+                        commandLogCallback({
+                            target: `AI Defense System`,
+                            command: 'Dispatch Interceptor',
+                            status: 'Success',
+                            details: `Interceptor ${closestInterceptor.id} dispatched to pursue escaped C-UAS target ${currentTarget.id}.`
+                        });
+                    } else {
+                        commandLogCallback({
+                            target: `AI Defense System`,
+                            command: 'Interceptor Dispatch Failed',
+                            status: 'Failed',
+                            details: `C-UAS target ${currentTarget.id} escaped, but no interceptors are available.`
+                        });
+                    }
+
+                    // After handing off, the C-UAS is free to scan for new immediate threats.
+                    system.currentTargetId = null;
+                    system.currentTargetInfo = null;
+                    system.status = CounterUASStatus.SCANNING;
+
+                } else if (distance > system.detectionRadius) {
+                    // Target is completely out of sensor range. Treat as lost.
+                    system.currentTargetId = null;
+                    system.currentTargetInfo = null;
+                    system.status = CounterUASStatus.SCANNING;
+                } else {
+                    // Target is still in range (either engagement or detection), so just update its info.
+                    system.currentTargetInfo = {
+                        id: currentTarget.id,
+                        distance: distance,
+                        speed: currentTarget.speed,
+                        threatScore: calculateThreatScore(currentTarget, system)
+                    };
+                }
             }
+        } else {
+            system.currentTargetInfo = null; // Ensure it's null if no ID
         }
 
         switch (system.status) {
             case CounterUASStatus.SCANNING: {
-                // In human-in-the-loop, AI will find targets and ask for permission.
-                if (system.mode === 'human_in_loop') {
-                    const hostileUFOs = ufos.filter(u =>
+                if (system.currentTargetId) break;
+
+                const potentialTargets = ufos
+                    .filter(u =>
                         (u.type === 'fpv_drone' || u.type === 'unknown_uav') &&
-                        getDistance3D(uasLocation, u.location) <= system.detectionRadius &&
-                        // Make sure we haven't already created a request for this ufo from this system
-                        !aiActionRequests.some(r => r.droneId === system.id && r.reason.includes(u.id.slice(-4)))
-                    );
+                        !Object.values(counterUASSystems).some(s => s.currentTargetId === u.id && s.id !== system.id)
+                    )
+                    .map(u => ({
+                        ufo: u,
+                        score: calculateThreatScore(u, system),
+                        distance: getDistance3D(uasLocation, u.location)
+                    }))
+                    .filter(item => item.distance <= system.detectionRadius);
 
-                    if (hostileUFOs.length > 0) {
-                        // Target the closest one to propose engagement
-                        hostileUFOs.sort((a, b) => getDistance3D(uasLocation, a.location) - getDistance3D(uasLocation, b.location));
-                        const newTarget = hostileUFOs[0];
+                if (potentialTargets.length > 0) {
+                    potentialTargets.sort((a, b) => b.score - a.score);
+                    const bestTarget = potentialTargets[0];
 
-                        if (getDistance3D(uasLocation, newTarget.location) <= system.engagementRadius) {
-                            system.currentTargetId = newTarget.id;
+                    if (bestTarget.distance <= system.engagementRadius) {
+                        const newTarget = bestTarget.ufo;
+                        system.currentTargetId = newTarget.id;
+                        system.currentTargetInfo = {
+                            id: newTarget.id,
+                            distance: bestTarget.distance,
+                            speed: newTarget.speed,
+                            threatScore: bestTarget.score
+                        };
+
+                        if (system.mode === 'autonomous') {
+                            system.status = CounterUASStatus.ENGAGING;
+                            commandLogCallback({
+                                target: system.id, command: 'Auto-Engage', status: 'Success',
+                                details: `System autonomously engaging highest threat target ${newTarget.id.slice(-4)}.`
+                            });
+                        } else if (system.mode === 'human_in_loop') {
                             system.status = CounterUASStatus.TARGETING;
-                            
-                            // Create a request for the operator
                             aiActionRequests.push({
                                 id: `req_cuas_${system.id}_${Date.now()}`,
-                                droneId: system.id, // Use system ID
+                                droneId: system.id,
                                 action: AIAction.ENGAGE_GROUND_DEFENSE,
-                                reason: `Hostile UAV ${newTarget.id.slice(-4)} detected within engagement range. Requesting permission to engage.`,
+                                reason: `Hostile UAV ${newTarget.id.slice(-4)} detected. Requesting permission to engage.`,
                                 priority: AIPriority.Critical,
                                 timestamp: new Date().toISOString(),
                             });
@@ -346,8 +478,7 @@ function updateCounterUASSimulation() {
             }
 
             case CounterUASStatus.TARGETING: {
-                // Waiting for operator approval. The approval will change the state to ENGAGING.
-                // If the target leaves the radius while waiting, the check at the top will handle it.
+                // Waiting for operator approval.
                 break;
             }
 
@@ -373,22 +504,34 @@ function updateCounterUASSimulation() {
                 }
 
                 const target = ufos.find(u => u.id === system.currentTargetId);
-                if (target) {
-                    system.ammo -= 5; // Fire a burst
-                    const distance = getDistance3D(uasLocation, target.location);
-                    // 90% hit chance at close range, decreasing with distance
-                    const hitChance = 0.9 * (1 - (distance / system.engagementRadius));
+                if (target && system.currentTargetInfo) {
+                    system.ammo -= 15;
+                    const distance = system.currentTargetInfo.distance;
+                    
+                    const baseHitChance = 0.98 * Math.pow(1 - (distance / system.engagementRadius), 0.75);
+                    const speedPenalty = Math.min(0.25, (target.speed / 150) * 0.25);
+                    const finalHitChance = baseHitChance - speedPenalty;
 
-                    if (Math.random() < hitChance) {
+                    if (Math.random() < finalHitChance) {
                         eliminationEvents.push({ targetId: target.id, location: target.location, timestamp: Date.now() });
                         eliminationLog.push({ targetId: target.id, source: system.id, timestamp: Date.now() });
                         ufos = ufos.filter(u => u.id !== target.id);
-                        system.currentTargetId = null;
-                        system.status = CounterUASStatus.SCANNING;
+
+                        const systemName = system.id.split('-')[0].toUpperCase();
+                        const targetId = target.id.split('_').pop()?.toUpperCase();
+                        commandLogCallback({
+                            target: system.id,
+                            command: 'Target Neutralized',
+                            status: 'Success',
+                            details: `Successfully neutralized hostile target ${target.id}.`,
+                            alert: { 
+                                preferenceKey: 'cuasNeutralization', 
+                                type: 'success', 
+                                messageKey: 'alerts.cuas_neutralization', 
+                                options: { systemName: systemName, targetId: targetId } 
+                            }
+                        });
                     }
-                } else {
-                    // Target lost (e.g. destroyed by drone)
-                    system.status = CounterUASStatus.SCANNING;
                 }
                 break;
             }
@@ -695,11 +838,9 @@ function generateHoveringAIRequest(id: string, drone: Drone) {
 }
 
 function updateDronePhysicsAndState(id: string, drone: Drone) {
-    // This factor is increased to make drone movement visually faster and more realistic,
-    // ensuring the visual speed matches the logical speed used for collision detection.
-    const DRONE_SPEED_FACTOR = 0.00025 * drone.cruisingSpeed * SIMULATION_SPEED;
     const ALTITUDE_CHANGE_RATE = 2 * SIMULATION_SPEED;
-    
+    const speedMps = drone.cruisingSpeed * MULTIPLIER_TO_MPH * 0.44704;
+
     // Reset ETA each tick, it will be recalculated if the drone is on a mission.
     drone.eta = undefined;
 
@@ -756,9 +897,6 @@ function updateDronePhysicsAndState(id: string, drone: Drone) {
             if (drone.isEliminationApproved) {
                 // --- ELIMINATION PHASE ---
                 const distanceToTarget = getDistance3D(drone.location, targetObject.location);
-
-                // --- FIX: Add overshoot protection by checking if the next move will reach or pass the target ---
-                const speedMps = drone.cruisingSpeed * MULTIPLIER_TO_MPH * 0.44704;
                 const ELIMINATION_SPEED_MULTIPLIER = 5;
                 const kamikazeSpeedMps = speedMps * ELIMINATION_SPEED_MULTIPLIER;
                 const stepDistance = kamikazeSpeedMps * SIMULATION_SPEED;
@@ -795,8 +933,12 @@ function updateDronePhysicsAndState(id: string, drone: Drone) {
                 // Kamikaze: Move directly towards the target's CURRENT location with high speed
                 const target = targetObject.location;
                 const angle = Math.atan2(target.lat - drone.location.lat, target.lon - drone.location.lon);
-                drone.location.lat += Math.sin(angle) * DRONE_SPEED_FACTOR * ELIMINATION_SPEED_MULTIPLIER;
-                drone.location.lon += Math.cos(angle) * DRONE_SPEED_FACTOR * ELIMINATION_SPEED_MULTIPLIER;
+                
+                // --- FIX: Use stepDistance for movement to prevent overshooting ---
+                const stepLat = Math.sin(angle) * (stepDistance / 111139);
+                const stepLon = Math.cos(angle) * (stepDistance / (111139 * Math.cos(drone.location.lat * Math.PI / 180)));
+                drone.location.lat += stepLat;
+                drone.location.lon += stepLon;
 
                 if (Math.abs(drone.location.alt - target.alt) > altitudeChangeRateInterceptor) {
                     drone.location.alt += Math.sign(target.alt - drone.location.alt) * altitudeChangeRateInterceptor;
@@ -806,22 +948,21 @@ function updateDronePhysicsAndState(id: string, drone: Drone) {
 
             } else {
                 // --- OBSERVATION & REQUEST PHASE ---
-                /**
-                 * OPERATOR DIRECTIVE:
-                 * To all Interception Drones on Mission: When Target is acquired, track target
-                 * over GPS coordinates and magnetic Directions until AI action is approved by Operator.
-                 */
-                // Use pure pursuit (direct chase) to avoid confusing "fly-by" maneuvers.
-                // The interceptor is fast enough to make this effective.
                 const targetLocationToAimFor = targetObject.location;
                 const distanceToTarget = getDistance3D(drone.location, targetLocationToAimFor);
+                const OBSERVATION_SPEED_MULTIPLIER = 3;
+                const observationSpeedMps = speedMps * OBSERVATION_SPEED_MULTIPLIER;
+                const stepDistance = observationSpeedMps * SIMULATION_SPEED;
 
                 // Move directly towards target's current location to observe
                 const target = targetLocationToAimFor;
                 const angle = Math.atan2(target.lat - drone.location.lat, target.lon - drone.location.lon);
-                const OBSERVATION_SPEED_MULTIPLIER = 3;
-                drone.location.lat += Math.sin(angle) * DRONE_SPEED_FACTOR * OBSERVATION_SPEED_MULTIPLIER;
-                drone.location.lon += Math.cos(angle) * DRONE_SPEED_FACTOR * OBSERVATION_SPEED_MULTIPLIER;
+
+                // --- FIX: Use stepDistance for movement to prevent overshooting ---
+                const stepLat = Math.sin(angle) * (stepDistance / 111139);
+                const stepLon = Math.cos(angle) * (stepDistance / (111139 * Math.cos(drone.location.lat * Math.PI / 180)));
+                drone.location.lat += stepLat;
+                drone.location.lon += stepLon;
 
                 if (Math.abs(drone.location.alt - target.alt) > altitudeChangeRateInterceptor) {
                     drone.location.alt += Math.sign(target.alt - drone.location.alt) * altitudeChangeRateInterceptor;
@@ -902,8 +1043,6 @@ function updateDronePhysicsAndState(id: string, drone: Drone) {
             }
             
             if (targetLocation) {
-                const speedMps = drone.cruisingSpeed * MULTIPLIER_TO_MPH * 0.44704;
-
                 if (drone.status === DroneStatus.AI_OVERRIDE && drone.isEliminationApproved) {
                     const distance3d = getDistance3D(drone.location, targetLocation);
                     const kamikazeSpeedMps = speedMps * 5; // ELIMINATION_SPEED_MULTIPLIER
@@ -938,9 +1077,13 @@ function updateDronePhysicsAndState(id: string, drone: Drone) {
                     }
 
                     const angle = Math.atan2(targetLocation.lat - drone.location.lat, targetLocation.lon - drone.location.lon);
-                    const ELIMINATION_SPEED_MULTIPLIER = 5;
-                    drone.location.lat += Math.sin(angle) * DRONE_SPEED_FACTOR * ELIMINATION_SPEED_MULTIPLIER;
-                    drone.location.lon += Math.cos(angle) * DRONE_SPEED_FACTOR * ELIMINATION_SPEED_MULTIPLIER;
+                    
+                    // --- FIX: Use stepDistance for movement to prevent overshooting ---
+                    const stepLat = Math.sin(angle) * (stepDistance / 111139);
+                    const stepLon = Math.cos(angle) * (stepDistance / (111139 * Math.cos(drone.location.lat * Math.PI / 180)));
+                    drone.location.lat += stepLat;
+                    drone.location.lon += stepLon;
+
                     if (Math.abs(drone.location.alt - targetLocation.alt) > ALTITUDE_CHANGE_RATE) {
                         drone.location.alt += Math.sign(targetLocation.alt - drone.location.alt) * ALTITUDE_CHANGE_RATE;
                     } else {
@@ -961,28 +1104,36 @@ function updateDronePhysicsAndState(id: string, drone: Drone) {
                 
                 const stepDistance = speedMps * SIMULATION_SPEED;
 
-                // If the drone is within 10m, or its next move will pass the target, it has arrived.
-                if (horizontalDistance < 10 || (stepDistance > 0 && horizontalDistance <= stepDistance)) {
-                    // Snap to target to prevent minor overshoots and ensure arrival.
-                    drone.location.lat = targetLocation.lat;
-                    drone.location.lon = targetLocation.lon;
-                    
+                // FIX: Refined arrival logic. Only transition to HOVERING when very close.
+                // If the next step would overshoot, move directly to the target first,
+                // allowing the state transition to happen cleanly on the next tick.
+                if (horizontalDistance < 10) {
+                    // Arrived at destination
                     if (isReturningHome) {
                         drone.status = DroneStatus.LANDING;
                     } else {
                         drone.target_locked = true;
                         drone.status = DroneStatus.HOVERING_ON_TARGET;
                         (drone as any).hoveringSince = Date.now();
-                        // Only generate a new request if one isn't already active for this drone
                         if (!aiActionRequests.some(r => r.droneId === id)) {
                             generateHoveringAIRequest(id, drone);
                         }
                     }
+                } else if (stepDistance > 0 && horizontalDistance <= stepDistance) {
+                    // Will overshoot on next step, so move directly to target to prepare for arrival on the next tick
+                    drone.location.lat = targetLocation.lat;
+                    drone.location.lon = targetLocation.lon;
                 } else {
+                    // Standard movement towards target
                     drone.target_locked = false;
                     const angle = Math.atan2(targetLocation.lat - drone.location.lat, targetLocation.lon - drone.location.lon);
-                    drone.location.lat += Math.sin(angle) * DRONE_SPEED_FACTOR;
-                    drone.location.lon += Math.cos(angle) * DRONE_SPEED_FACTOR;
+
+                    // --- FIX: Use stepDistance for movement to be physically correct ---
+                    const stepLat = Math.sin(angle) * (stepDistance / 111139);
+                    const stepLon = Math.cos(angle) * (stepDistance / (111139 * Math.cos(drone.location.lat * Math.PI / 180)));
+                    drone.location.lat += stepLat;
+                    drone.location.lon += stepLon;
+
 
                     if (Math.abs(drone.location.alt - targetAlt) > ALTITUDE_CHANGE_RATE) {
                         drone.location.alt += Math.sign(targetAlt - drone.location.alt) * ALTITUDE_CHANGE_RATE;
@@ -993,15 +1144,24 @@ function updateDronePhysicsAndState(id: string, drone: Drone) {
             }
             break;
         }
-        case DroneStatus.EVADING:
+        case DroneStatus.EVADING: {
             if (!evasionTimers[id] || evasionTimers[id] <= 0) {
                 drone.status = DroneStatus.RETURNING_TO_BASE;
             } else {
-                drone.location.lat += (Math.random() - 0.5) * DRONE_SPEED_FACTOR * 2;
-                drone.location.lon += (Math.random() - 0.5) * DRONE_SPEED_FACTOR * 2;
+                // --- FIX: Use consistent movement logic for evasion ---
+                const evasionSpeedMps = speedMps * 1.5; // Evade faster than cruising
+                const stepDistance = evasionSpeedMps * SIMULATION_SPEED;
+                const evasionAngle = (Math.random() * 360) * (Math.PI / 180);
+
+                const stepLat = Math.sin(evasionAngle) * (stepDistance / 111139);
+                const stepLon = Math.cos(evasionAngle) * (stepDistance / (111139 * Math.cos(drone.location.lat * Math.PI / 180)));
+                
+                drone.location.lat += stepLat;
+                drone.location.lon += stepLon;
                 evasionTimers[id] -= 1000 * SIMULATION_SPEED;
             }
             break;
+        }
         case DroneStatus.HOVERING_AT_BASE:
             // Idle state
             break;

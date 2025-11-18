@@ -1,5 +1,8 @@
 
 
+
+
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Header } from './components/Header';
 import { FleetControls } from './components/FleetControls';
@@ -57,7 +60,7 @@ const locationMatches = (l1: Location, l2: Location, tolerance = 1e-5): boolean 
 };
 
 
-function App() {
+export default function App() {
     const [drones, setDrones] = useState<Drones>({});
     const [apiPort, setApiPort] = useState<string>('8080');
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -140,6 +143,7 @@ function App() {
         interceptionSuccess: true,
         geofenceEntry: true,
         geofenceExit: true,
+        cuasNeutralization: true,
         readAloud: true,
         selectedVoice: null,
         sounds: {
@@ -260,6 +264,7 @@ function App() {
                             interceptionSuccess: parsedPrefs.interceptionSuccess ?? prev.interceptionSuccess,
                             geofenceEntry: parsedPrefs.geofenceEntry ?? prev.geofenceEntry,
                             geofenceExit: parsedPrefs.geofenceExit ?? prev.geofenceExit,
+                            cuasNeutralization: parsedPrefs.cuasNeutralization ?? prev.cuasNeutralization,
                             readAloud: parsedPrefs.readAloud ?? prev.readAloud,
                             selectedVoice: parsedPrefs.selectedVoice ?? prev.selectedVoice,
                             sounds: sounds
@@ -808,7 +813,7 @@ function App() {
         prevAiRequestsRef.current = aiActionRequests;
         prevAiTargetDesignationsRef.current = aiTargetDesignations;
 
-    }, [drones, error, anomalies, threats, aiActionRequests, aiTargetDesignations, healthScores, alertPreferences.master, isReplayMode, checkConnectionAlerts, checkDroneStatusAlerts, checkAnomalyAlerts, checkAIRequestAlerts, checkAITargetDesignationAlerts, checkThreatAlerts, checkAICompletionAlerts, checkPresetMissionCompletionAlerts]);
+    }, [drones, error, anomalies, threats, aiActionRequests, aiTargetDesignations, healthScores, missionPresets, alertPreferences.master, isReplayMode, checkConnectionAlerts, checkDroneStatusAlerts, checkAnomalyAlerts, checkAIRequestAlerts, checkAITargetDesignationAlerts, checkThreatAlerts, checkAICompletionAlerts, checkPresetMissionCompletionAlerts]);
 
     // Effect for Geofence Alerts (depends on UFOs too)
     useEffect(() => {
@@ -1384,184 +1389,193 @@ function App() {
                         getDroneDisplayName={getDroneDisplayName}
                     />
                     <div className="space-y-8">
-                        {/* FIX: Cast Object.values to the correct type to resolve type inference issues where items were treated as 'unknown'. */}
-                        {(Object.values(counterUASSystems) as CounterUASSystem[]).sort((a: CounterUASSystem, b: CounterUASSystem) => a.id.localeCompare(b.id)).map(system => (
-                            <CounterUASPanel key={system.id} system={system} onCeaseFire={() => handleCeaseFire(system.id)} />
+                        {/* FIX: The Array.prototype.sort() compare function was incorrect, returning a CounterUASSystem object instead of a number. This has been corrected to sort by the system's ID string. */}
+                        {(Object.values(counterUASSystems) as CounterUASSystem[]).sort((a: CounterUASSystem, b: CounterUASSystem) => a.id.localeCompare(b.id)).map((system: CounterUASSystem) => (
+                            <CounterUASPanel 
+                                key={system.id} 
+                                system={system} 
+                                onCeaseFire={() => handleCeaseFire(system.id)} 
+                            />
                         ))}
-                    </div>
-                </div>
-            </div>
-            <main>
-                <div className="container mx-auto p-4 md:p-8">
-                    <AIActionRequests
-                        requests={aiActionRequests}
-                        onRespond={handleAIActionResponse}
-                        onOverride={handleAIActionOverride}
-                        getDroneDisplayName={getDroneDisplayName}
-                    />
-
-                    <AITargetDesignations
-                        designations={aiTargetDesignations}
-                        onRespond={handleAITargetResponse}
-                        onSelect={handleTargetDesignationSelect}
-                        getDroneDisplayName={getDroneDisplayName}
-                        drones={drones}
-                    />
-
-                    <FlightPathAnalysis
-                        suggestions={flightSuggestions}
-                        onRespond={handleFlightSuggestionResponse}
-                        getDroneDisplayName={getDroneDisplayName}
-                    />
-
-                    <div ref={mapRef} className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                        <DroneMap 
-                            drones={drones} 
-                            selectedDroneId={selectedDroneId} 
-                            flightPaths={flightPaths}
-                            anomalies={anomalies}
-                            selectedAnomalyId={selectedAnomalyId}
-                            threats={threats}
-                            selectedThreatId={selectedThreatId}
-                            aiTargetDesignations={aiTargetDesignations}
-                            selectedTargetDesignationId={selectedTargetDesignationId}
+                        <GeofencePanel
                             geofences={geofences}
-                            isDrawingGeofence={isDrawingGeofence}
-                            newGeofencePoints={newGeofencePoints}
-                            ufos={ufos}
-                            geofenceEvents={geofenceEvents}
-                            selectedGeofenceEventId={selectedGeofenceEventId}
-                            eliminationEvents={eliminationEvents}
-                            counterUAS={counterUASSystems}
-                            onDroneSelect={handleDroneSelect}
-                            onAnomalySelect={handleAnomalySelect}
-                            onThreatSelect={handleThreatSelect}
-                            onDeselect={handleDeselect}
-                            onAddGeofencePoint={handleAddGeofencePoint}
-                            onCancelDrawing={handleCancelDrawingGeofence}
-                            onFinishDrawing={handleFinishDrawingGeofence}
-                            isReplayMode={isReplayMode}
-                            replayDroneId={replayTargetId}
-                            replayProgressIndex={replayProgress}
-                            droneNicknames={droneNicknames}
-                            showGeofences={showGeofences}
-                            getDroneDisplayName={getDroneDisplayName}
+                            onStartDrawing={handleStartDrawingGeofence}
+                            onDelete={handleDeleteGeofence}
                         />
-                        <VideoFeedsPanel
-                            drones={drones}
-                            droneNicknames={droneNicknames}
+                         <AudioAlerts
+                            preferences={alertPreferences}
+                            onPreferencesChange={setAlertPreferences}
+                            availableVoices={availableVoices}
                         />
                     </div>
-
-                    <DroneFleet 
-                        drones={drones} 
-                        error={error} 
-                        onSingleCommand={handleSingleDroneCommand}
-                        onShowMissionModal={showMissionModal}
-                        selectedDroneId={selectedDroneId}
-                        highSeverityCounts={highSeverityCounts}
-                        healthScores={healthScores}
-                        flightPaths={flightPaths}
-                        droneNicknames={droneNicknames}
-                        onSetNickname={handleSetNickname}
-                        onGroupCommand={handleGroupCommand}
-                        threats={threats}
-                        ufos={ufos}
-                    />
-                    
-                    <GeofencePanel 
-                        geofences={geofences}
-                        onStartDrawing={handleStartDrawingGeofence}
-                        onDelete={handleDeleteGeofence}
-                    />
-                    <GeofenceEventLog 
-                        events={geofenceEvents}
-                        ufos={ufos}
-                        onSelectEvent={handleGeofenceEventSelect}
-                    />
-                    <AnomalyFeed 
-                        anomalies={anomalies} 
-                        onSelectAnomaly={handleAnomalySelect} 
-                        onInitiateRepair={handleInitiateRepair}
-                        selectedAnomalyId={selectedAnomalyId} 
-                        droneNicknames={droneNicknames}
-                    />
-                    <ThreatFeed
-                        threats={threats}
-                        // FIX: Corrected typo from handleSelectThreat to handleThreatSelect.
-                        onSelectThreat={handleThreatSelect}
-                        selectedThreatId={selectedThreatId}
-                        onRespondToThreat={handleRespondToThreat}
-                    />
-                    <CommandLog logEntries={commandLog} />
-                    <AICommAssistant />
-                    <AudioAlerts 
-                        preferences={alertPreferences} 
-                        onPreferencesChange={setAlertPreferences} 
-                        availableVoices={availableVoices}
-                    />
                 </div>
-            </main>
-            <MissionModal 
-                isOpen={isModalOpen}
-                target={modalTarget}
-                onClose={closeMissionModal}
-                onSubmit={submitMission}
-                presets={missionPresets}
-                userRole={userRole}
-                onSavePreset={handleSavePreset}
-                onDeletePreset={handleDeletePreset}
-                getDroneDisplayName={getDroneDisplayName}
-            />
-            <GeofenceModal
-                isOpen={isGeofenceModalOpen}
-                onClose={() => {
-                    setIsGeofenceModalOpen(false);
-                    setNewGeofencePoints([]);
-                }}
-                onSave={handleSaveGeofence}
-                existingNames={geofences.map(f => f.name)}
-            />
-            <DiagnosticsModal
-                isOpen={isDiagnosticsModalOpen}
-                onClose={() => setIsDiagnosticsModalOpen(false)}
-                droneId={diagnosticsTargetId}
-                isLoading={isDiagnosticsLoading}
-                result={diagnosticsResult}
-                getDroneDisplayName={getDroneDisplayName}
-            />
-            <PreFlightChecklistModal
-                isOpen={isChecklistModalOpen}
-                onClose={() => setIsChecklistModalOpen(false)}
-                droneId={checklistTargetId}
-                onConfirmLaunch={handleConfirmLaunch}
-                getDroneDisplayName={getDroneDisplayName}
-            />
-            {isReplayMode && replayPath && replayTargetId && (
-                <ReplayControls
-                    droneId={replayTargetId}
-                    path={replayPath}
-                    progress={replayProgress}
-                    isPlaying={isReplaying}
-                    speed={replaySpeed}
-                    onPlayPause={() => setIsReplaying(!isReplaying)}
-                    onClose={handleStopReplay}
-                    onProgressChange={setReplayProgress}
-                    onSpeedChange={setReplaySpeed}
+
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8" ref={mapRef}>
+                    <DroneMap
+                        drones={drones}
+                        selectedDroneId={selectedDroneId}
+                        flightPaths={flightPaths}
+                        anomalies={anomalies}
+                        selectedAnomalyId={selectedAnomalyId}
+                        threats={threats}
+                        selectedThreatId={selectedThreatId}
+                        aiTargetDesignations={aiTargetDesignations}
+                        selectedTargetDesignationId={selectedTargetDesignationId}
+                        geofences={geofences}
+                        isDrawingGeofence={isDrawingGeofence}
+                        newGeofencePoints={newGeofencePoints}
+                        ufos={ufos}
+                        geofenceEvents={geofenceEvents}
+                        selectedGeofenceEventId={selectedGeofenceEventId}
+                        eliminationEvents={eliminationEvents}
+                        counterUAS={counterUASSystems}
+                        onDroneSelect={handleDroneSelect}
+                        onAnomalySelect={handleAnomalySelect}
+                        onThreatSelect={handleThreatSelect}
+                        onDeselect={handleDeselect}
+                        onAddGeofencePoint={handleAddGeofencePoint}
+                        onCancelDrawing={handleCancelDrawingGeofence}
+                        onFinishDrawing={handleFinishDrawingGeofence}
+                        isReplayMode={isReplayMode}
+                        replayDroneId={replayTargetId}
+                        replayProgressIndex={replayProgress}
+                        droneNicknames={droneNicknames}
+                        showGeofences={showGeofences}
+                        getDroneDisplayName={getDroneDisplayName}
+                    />
+                    <VideoFeedsPanel drones={drones} droneNicknames={droneNicknames} />
+                </div>
+                
+                {isReplayMode && replayPath && (
+                    <ReplayControls
+                        droneId={replayTargetId!}
+                        path={replayPath}
+                        progress={replayProgress}
+                        isPlaying={isReplaying}
+                        speed={replaySpeed}
+                        onPlayPause={() => setIsReplaying(!isReplaying)}
+                        onClose={handleStopReplay}
+                        onProgressChange={setReplayProgress}
+                        onSpeedChange={setReplaySpeed}
+                        getDroneDisplayName={getDroneDisplayName}
+                    />
+                )}
+
+                <AIActionRequests
+                    requests={aiActionRequests}
+                    onRespond={handleAIActionResponse}
+                    onOverride={handleAIActionOverride}
                     getDroneDisplayName={getDroneDisplayName}
                 />
-            )}
-            {/* FIX: Corrected prop to use the 'setApiPort' state setter function. */}
-            <SettingsPanel 
-                port={apiPort} 
-                setPort={setApiPort} 
-                userRole={userRole} 
-                onRoleChange={setUserRole}
-                showGeofences={showGeofences}
-                onShowGeofencesChange={setShowGeofences}
-            />
+                <AITargetDesignations
+                    designations={aiTargetDesignations}
+                    onRespond={handleAITargetResponse}
+                    onSelect={handleTargetDesignationSelect}
+                    getDroneDisplayName={getDroneDisplayName}
+                    drones={drones}
+                />
+                <FlightPathAnalysis
+                    suggestions={flightSuggestions}
+                    onRespond={handleFlightSuggestionResponse}
+                    getDroneDisplayName={getDroneDisplayName}
+                />
+                <ThreatFeed
+                    threats={threats}
+                    onSelectThreat={handleThreatSelect}
+                    selectedThreatId={selectedThreatId}
+                    onRespondToThreat={handleRespondToThreat}
+                />
+                <AnomalyFeed
+                    anomalies={anomalies}
+                    onSelectAnomaly={handleAnomalySelect}
+                    onInitiateRepair={handleInitiateRepair}
+                    selectedAnomalyId={selectedAnomalyId}
+                    droneNicknames={droneNicknames}
+                />
+                <GeofenceEventLog
+                    events={geofenceEvents}
+                    ufos={ufos}
+                    onSelectEvent={handleGeofenceEventSelect}
+                />
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-8">
+                    <div className="xl:col-span-2">
+                         <DroneFleet
+                            drones={drones}
+                            error={error}
+                            onSingleCommand={handleSingleDroneCommand}
+                            onShowMissionModal={showMissionModal}
+                            selectedDroneId={selectedDroneId}
+                            highSeverityCounts={highSeverityCounts}
+                            healthScores={healthScores}
+                            flightPaths={flightPaths}
+                            droneNicknames={droneNicknames}
+                            onSetNickname={handleSetNickname}
+                            onGroupCommand={handleGroupCommand}
+                            threats={threats}
+                            ufos={ufos}
+                        />
+                    </div>
+                    <div className="space-y-8">
+                        <AICommAssistant />
+                    </div>
+                </div>
+
+                <CommandLog logEntries={commandLog} />
+
+                 <SettingsPanel
+                    port={apiPort}
+                    setPort={setApiPort}
+                    userRole={userRole}
+                    onRoleChange={setUserRole}
+                    showGeofences={showGeofences}
+                    onShowGeofencesChange={setShowGeofences}
+                />
+
+                {isModalOpen && (
+                    <MissionModal
+                        isOpen={isModalOpen}
+                        target={modalTarget}
+                        onClose={closeMissionModal}
+                        onSubmit={submitMission}
+                        presets={missionPresets}
+                        userRole={userRole}
+                        onSavePreset={handleSavePreset}
+                        onDeletePreset={handleDeletePreset}
+                        getDroneDisplayName={getDroneDisplayName}
+                    />
+                )}
+
+                {isDiagnosticsModalOpen && (
+                    <DiagnosticsModal
+                        isOpen={isDiagnosticsModalOpen}
+                        onClose={() => setIsDiagnosticsModalOpen(false)}
+                        droneId={diagnosticsTargetId}
+                        isLoading={isDiagnosticsLoading}
+                        result={diagnosticsResult}
+                        getDroneDisplayName={getDroneDisplayName}
+                    />
+                )}
+
+                {isChecklistModalOpen && (
+                    <PreFlightChecklistModal
+                        isOpen={isChecklistModalOpen}
+                        onClose={() => setIsChecklistModalOpen(false)}
+                        onConfirmLaunch={handleConfirmLaunch}
+                        droneId={checklistTargetId}
+                        getDroneDisplayName={getDroneDisplayName}
+                    />
+                )}
+
+                {isGeofenceModalOpen && (
+                    <GeofenceModal
+                        isOpen={isGeofenceModalOpen}
+                        onClose={() => setIsGeofenceModalOpen(false)}
+                        onSave={handleSaveGeofence}
+                        existingNames={geofences.map(g => g.name)}
+                    />
+                )}
+
+            </div>
         </div>
     );
 }
-
-export default App;

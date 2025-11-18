@@ -1,4 +1,3 @@
-
 {
   "header.tagline": "Точность. Видение. Командование.",
   "header.language": "Язык: {{language}}",
@@ -116,13 +115,14 @@
   "audio_alerts.ai_mission_complete": "Миссия ИИ завершена",
   "audio_alerts.preset_mission_success": "Результат заданной миссии",
   "audio_alerts.interception_success": "Результат перехвата",
+  "audio_alerts.cuas_neutralization": "Нейтрализация системой ПВО",
+  "audio_alerts.geofence_entry": "Оповещение о входе в геозону",
+  "audio_alerts.geofence_exit": "Оповещение о выходе из геозоны",
   "audio_alerts.mission_start": "Начало миссии",
   "audio_alerts.return_to_base": "Возвращение на базу",
   "audio_alerts.high_severity_anomaly": "Аномалия высокой серьезности",
   "audio_alerts.repair_complete": "Ремонт завершен",
   "audio_alerts.repair_failed": "Ремонт не удался",
-  "audio_alerts.geofence_entry": "Оповещение о входе в геозону",
-  "audio_alerts.geofence_exit": "Оповещение о выходе из геозоны",
   "audio_alerts.sound_customization": "Настройка звука",
   "audio_alerts.sound.success": "Звук успеха",
   "audio_alerts.sound.notification": "Звук уведомления",
@@ -212,6 +212,7 @@
   "alerts.ai_mission_complete": "ИИ дрона {{droneName}} успешно выполнил миссию в неблагоприятных условиях.",
   "alerts.preset_mission_success": "{{droneName}} достиг заданной цели: {{presetName}}.",
   "alerts.interception_success_alert": "{{droneName}} успешно ликвидировал свою цель.",
+  "alerts.cuas_neutralization": "Система ПВО {{systemName}} нейтрализовала враждебную цель {{targetId}}.",
   "alerts.geofence_entry": "{{objectName}} вошел в геозону: {{geofenceName}}.",
   "alerts.geofence_exit": "{{objectName}} покинул геозону: {{geofenceName}}.",
   "status.grounded": "НА ЗЕМЛЕ",
@@ -392,6 +393,7 @@
   "log.details.zone_defined": "Зона \"{{name}}\" определена.",
   "log.details.zone_removed": "Зона \"{{name}}\" удалена.",
   "counter_uas.title": "Система противодействия БПЛА",
+  "counter_uas.title_id": "Система противодействия БПЛА {{id}}",
   "counter_uas.status": "Статус",
   "counter_uas.ammo": "Боезапас",
   "counter_uas.target": "Цель",
@@ -405,5 +407,10 @@
   "counter_uas.status.disabled": "ОТКЛЮЧЕНО",
   "counter_uas.mode.autonomous": "Полностью автономный",
   "counter_uas.mode.human_in_loop": "С участием человека",
-  "counter_uas.mode.manual": "Ручное управление"
+  "counter_uas.mode.manual": "Ручное управление",
+  "counter_uas.target_lock": "Захват цели",
+  "counter_uas.target_dist": "Расстояние",
+  "counter_uas.target_speed": "Скорость",
+  "counter_uas.target_threat": "Уровень угрозы",
+  "counter_uas.no_target": "Захват цели..."
 }

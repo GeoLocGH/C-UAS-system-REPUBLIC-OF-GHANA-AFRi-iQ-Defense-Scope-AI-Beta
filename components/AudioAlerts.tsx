@@ -171,6 +171,10 @@ export const AudioAlerts: React.FC<AudioAlertsProps> = ({ preferences, onPrefere
                             <ToggleSwitch id="interceptionSuccessToggle" isEnabled={preferences.interceptionSuccess} onToggle={() => handleToggle('interceptionSuccess')} />
                         </div>
                         <div className="flex items-center justify-between pl-4 border-l-2 border-gray-700">
+                            <label htmlFor="cuasNeutralizationToggle">{t('audio_alerts.cuas_neutralization')}</label>
+                            <ToggleSwitch id="cuasNeutralizationToggle" isEnabled={preferences.cuasNeutralization} onToggle={() => handleToggle('cuasNeutralization')} />
+                        </div>
+                        <div className="flex items-center justify-between pl-4 border-l-2 border-gray-700">
                             <label htmlFor="missionStartToggle">{t('audio_alerts.mission_start')}</label>
                             <ToggleSwitch id="missionStartToggle" isEnabled={preferences.missionStart} onToggle={() => handleToggle('missionStart')} />
                         </div>

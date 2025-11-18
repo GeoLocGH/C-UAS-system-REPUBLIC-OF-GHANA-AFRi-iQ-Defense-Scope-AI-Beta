@@ -1,5 +1,3 @@
-
-
 {
   "header.tagline": "Précision. Vision. Commande.",
   "header.language": "Langue : {{language}}",
@@ -109,13 +107,14 @@
   "audio_alerts.ai_mission_complete": "Mission IA Terminée",
   "audio_alerts.preset_mission_success": "Résultat de Mission Prédéfinie",
   "audio_alerts.interception_success": "Résultat de l'Interception",
+  "audio_alerts.cuas_neutralization": "Neutralisation Contre-UAS",
+  "audio_alerts.geofence_entry": "Alerte d'Entrée dans la Géozone",
+  "audio_alerts.geofence_exit": "Alerte de Sortie de la Géozone",
   "audio_alerts.mission_start": "Début de Mission",
   "audio_alerts.return_to_base": "Retour à la Base",
   "audio_alerts.high_severity_anomaly": "Anomalie de Gravité Élevée",
   "audio_alerts.repair_complete": "Réparation Terminée",
   "audio_alerts.repair_failed": "Échec de la Réparation",
-  "audio_alerts.geofence_entry": "Alerte d'Entrée dans la Géozone",
-  "audio_alerts.geofence_exit": "Alerte de Sortie de la Géozone",
   "audio_alerts.sound_customization": "Personnalisation du Son",
   "audio_alerts.sound.success": "Son de Succès",
   "audio_alerts.sound.notification": "Son de Notification",
@@ -205,6 +204,7 @@
   "alerts.ai_mission_complete": "L'IA de {{droneName}} a exécuté avec succès la mission dans des conditions défavorables.",
   "alerts.preset_mission_success": "{{droneName}} a atteint la cible prédéfinie : {{presetName}}.",
   "alerts.interception_success_alert": "{{droneName}} a éliminé sa cible avec succès.",
+  "alerts.cuas_neutralization": "Le système Contre-UAS {{systemName}} a neutralisé la cible hostile {{targetId}}.",
   "alerts.geofence_entry": "{{objectName}} est entré dans la zone de géorepérage : {{geofenceName}}.",
   "alerts.geofence_exit": "{{objectName}} a quitté la zone de géorepérage : {{geofenceName}}.",
   "status.grounded": "AU SOL",
@@ -399,5 +399,10 @@
   "counter_uas.status.disabled": "DÉSACTIVÉ",
   "counter_uas.mode.autonomous": "Entièrement Autonome",
   "counter_uas.mode.human_in_loop": "Avec Opérateur",
-  "counter_uas.mode.manual": "Contrôle Manuel"
+  "counter_uas.mode.manual": "Contrôle Manuel",
+  "counter_uas.target_lock": "Verrouillage Cible",
+  "counter_uas.target_dist": "Distance",
+  "counter_uas.target_speed": "Vitesse",
+  "counter_uas.target_threat": "Niveau de Menace",
+  "counter_uas.no_target": "Acquisition de cible..."
 }

@@ -1,5 +1,3 @@
-
-
 {
   "header.tagline": "Precision. Vision. Command.",
   "header.language": "Language: {{language}}",
@@ -117,13 +115,14 @@
   "audio_alerts.ai_mission_complete": "AI Mission Completion",
   "audio_alerts.preset_mission_success": "Preset Mission Outcome",
   "audio_alerts.interception_success": "Interception Outcome",
+  "audio_alerts.cuas_neutralization": "Counter-UAS Neutralization",
+  "audio_alerts.geofence_entry": "Geofence Entry Alert",
+  "audio_alerts.geofence_exit": "Geofence Exit Alert",
   "audio_alerts.mission_start": "Mission Start",
   "audio_alerts.return_to_base": "Return to Base",
   "audio_alerts.high_severity_anomaly": "High Severity Anomaly",
   "audio_alerts.repair_complete": "Repair Complete",
   "audio_alerts.repair_failed": "Repair Failed",
-  "audio_alerts.geofence_entry": "Geofence Entry Alert",
-  "audio_alerts.geofence_exit": "Geofence Exit Alert",
   "audio_alerts.sound_customization": "Sound Customization",
   "audio_alerts.sound.success": "Success Sound",
   "audio_alerts.sound.notification": "Notification Sound",
@@ -213,6 +212,7 @@
   "alerts.ai_mission_complete": "{{droneName}} AI has successfully executed the mission under adverse conditions.",
   "alerts.preset_mission_success": "{{droneName}} has reached preset target: {{presetName}}.",
   "alerts.interception_success_alert": "{{droneName}} has successfully eliminated its target.",
+  "alerts.cuas_neutralization": "Counter UAS system {{systemName}} has neutralized hostile target {{targetId}}.",
   "alerts.geofence_entry": "{{objectName}} has entered geofence zone: {{geofenceName}}.",
   "alerts.geofence_exit": "{{objectName}} has exited geofence zone: {{geofenceName}}.",
   "status.grounded": "GROUNDED",
@@ -407,5 +407,10 @@
   "counter_uas.status.disabled": "DISABLED",
   "counter_uas.mode.autonomous": "Fully Autonomous",
   "counter_uas.mode.human_in_loop": "Human-in-the-Loop",
-  "counter_uas.mode.manual": "Manual Control"
+  "counter_uas.mode.manual": "Manual Control",
+  "counter_uas.target_lock": "Target Lock",
+  "counter_uas.target_dist": "Distance",
+  "counter_uas.target_speed": "Speed",
+  "counter_uas.target_threat": "Threat Level",
+  "counter_uas.no_target": "Acquiring target..."
 }

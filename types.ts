@@ -109,6 +109,7 @@ export interface AlertPreferences {
   interceptionSuccess: boolean;
   geofenceEntry: boolean;
   geofenceExit: boolean;
+  cuasNeutralization: boolean;
   readAloud: boolean;
   selectedVoice: string | null;
   sounds: AlertSoundPreferences;
@@ -307,6 +308,13 @@ export enum CounterUASStatus {
     DISABLED = 'disabled'
 }
 
+export interface CounterUASTargetInfo {
+    id: string;
+    distance: number; // meters
+    speed: number; // km/h
+    threatScore: number;
+}
+
 export interface CounterUASSystem {
     id: string;
     location: Location;
@@ -316,5 +324,6 @@ export interface CounterUASSystem {
     detectionRadius: number; // in meters
     engagementRadius: number; // in meters
     currentTargetId: string | null;
+    currentTargetInfo: CounterUASTargetInfo | null;
     mode: 'autonomous' | 'manual' | 'human_in_loop';
 }
