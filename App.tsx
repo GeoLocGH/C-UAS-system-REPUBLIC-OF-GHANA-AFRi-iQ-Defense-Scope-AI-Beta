@@ -1,8 +1,3 @@
-
-
-
-
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Header } from './components/Header';
 import { FleetControls } from './components/FleetControls';
@@ -33,6 +28,7 @@ import { GeofenceModal } from './components/GeofenceModal';
 import { GeofenceEventLog } from './components/GeofenceEventLog';
 import { useTranslation } from './contexts/I18nContext';
 import { CounterUASPanel } from './components/CounterUASPanel';
+import { WindowFrame } from './components/WindowFrame';
 
 const CONNECTION_FAIL_THRESHOLD = 3;
 const HEALTH_THRESHOLD = 70; // Health score below which is considered a warning
@@ -163,6 +159,8 @@ export default function App() {
     const prevAiRequestsRef = useRef<AIActionRequest[]>([]);
     const prevAiTargetDesignationsRef = useRef<AITargetDesignationRequest[]>([]);
     const consecutiveFailsRef = useRef(0);
+    
+    // ... [Rest of the hooks and logic remain unchanged] ...
 
     const getDroneDisplayName = useCallback((droneId: string) => {
         if (droneNicknames[droneId]) {
@@ -189,7 +187,6 @@ export default function App() {
         });
     }, []);
     
-    // FIX: Moved triggerAlert definition before its usage in the useEffect below to resolve a "used before declaration" error.
     const triggerAlert = useCallback((soundType: 'success' | 'notification' | 'warning' | 'error', message: string) => {
         const { readAloud, sounds, selectedVoice } = alertPreferences;
         playConfiguredSound(soundType, sounds[soundType]);
@@ -198,30 +195,23 @@ export default function App() {
         }
     }, [alertPreferences, language]);
 
-    // Connect logger to API simulation
     useEffect(() => {
         setCommandLogCallback((log: any) => {
             addLogEntry(log.target, log.command, log.status, log.details);
             if (log.alert && alertPreferences.master) {
-                // Check if the specific alert type is enabled
                 if (log.alert.preferenceKey && !alertPreferences[log.alert.preferenceKey as keyof AlertPreferences]) {
                     return;
                 }
-
                 let alertOptions = log.alert.options || {};
                 if (alertOptions.droneId) {
-                    // Create a new object to avoid mutating the original log object if it's used elsewhere
                     alertOptions = { ...alertOptions, droneName: getDroneDisplayName(alertOptions.droneId) };
                 }
-
                 const message = t(log.alert.messageKey, alertOptions);
                 triggerAlert(log.alert.type, message);
             }
         });
     }, [addLogEntry, t, triggerAlert, alertPreferences, getDroneDisplayName]);
 
-
-    // Load presets and voices from localStorage on initial load
     useEffect(() => {
         try {
             const savedPresets = localStorage.getItem('missionPresets');
@@ -240,7 +230,6 @@ export default function App() {
              if (savedAlertPrefs) {
                 try {
                     const parsedPrefs = JSON.parse(savedAlertPrefs);
-                    // Robust merging of preferences
                     setAlertPreferences(prev => {
                         const sounds = (parsedPrefs.sounds && typeof parsedPrefs.sounds === 'object')
                             ? { ...prev.sounds, ...parsedPrefs.sounds }
@@ -279,9 +268,7 @@ export default function App() {
         }
     }, []);
     
-    // Load available voices for the current language
     useEffect(() => {
-        // Voices can take a moment to load. We check periodically.
         let voiceInterval: number | undefined;
         let voiceTimeout: number | undefined;
         
@@ -294,11 +281,11 @@ export default function App() {
             }
         };
 
-        loadAndSetVoices(); // Initial check
+        loadAndSetVoices(); 
         voiceInterval = window.setInterval(loadAndSetVoices, 500);
         voiceTimeout = window.setTimeout(() => {
             if (voiceInterval) clearInterval(voiceInterval);
-        }, 5000); // Stop polling after 5 seconds
+        }, 5000); 
 
         return () => {
             if (voiceInterval) clearInterval(voiceInterval);
@@ -307,8 +294,6 @@ export default function App() {
 
     }, [language]);
 
-
-    // Save presets to localStorage whenever they change
     useEffect(() => {
         try {
             localStorage.setItem('missionPresets', JSON.stringify(missionPresets));
@@ -317,7 +302,6 @@ export default function App() {
         }
     }, [missionPresets]);
     
-     // Save flight paths to localStorage whenever they change
     useEffect(() => {
         try {
             localStorage.setItem('flightPaths', JSON.stringify(flightPaths));
@@ -326,7 +310,6 @@ export default function App() {
         }
     }, [flightPaths]);
 
-     // Save alert preferences to localStorage whenever they change
     useEffect(() => {
         try {
             localStorage.setItem('alertPreferences', JSON.stringify(alertPreferences));
@@ -335,7 +318,6 @@ export default function App() {
         }
     }, [alertPreferences]);
 
-     // Save nicknames to localStorage whenever they change
     useEffect(() => {
         try {
             localStorage.setItem('droneNicknames', JSON.stringify(droneNicknames));
@@ -344,13 +326,9 @@ export default function App() {
         }
     }, [droneNicknames]);
     
-    // This effect hook handles the side effects of persisting geofences.
-    // It runs whenever the `geofences` state changes, ensuring that localStorage
-    // and the AI simulation's configuration are always in sync with the UI state.
     useEffect(() => {
         try {
             localStorage.setItem('geofences', JSON.stringify(geofences));
-            // Update the API simulation with the latest geofence configuration for AI logic.
             updateGeofenceConfigForAI(geofences);
         } catch (e) {
             console.error("Failed to save geofences to localStorage", e);
@@ -362,12 +340,11 @@ export default function App() {
         try {
             const data = await fetchDroneStatus(apiPort);
             setDrones(data);
-            setError(null); // Clear error on successful fetch
-            consecutiveFailsRef.current = 0; // Reset fail counter
+            setError(null);
+            consecutiveFailsRef.current = 0;
 
             const now = Date.now();
             
-            // Refactored to prevent stale data from destroyed drones
             setTelemetryHistory(prevHistory => {
                 const newHistory: TelemetryHistory = {};
                 Object.keys(data).forEach(id => {
@@ -383,7 +360,6 @@ export default function App() {
                 return newHistory;
             });
 
-            // Refactored to prevent stale data from destroyed drones
             setFlightPaths(prevPaths => {
                 const newPaths: FlightPaths = {};
                 Object.keys(data).forEach(id => {
@@ -392,12 +368,11 @@ export default function App() {
                     
                     const lastPoint = existingPath[existingPath.length - 1];
                     let updatedPath = existingPath;
-                    // Only add point if location has changed to avoid clutter
                     if (!lastPoint || lastPoint.lat !== newPoint.lat || lastPoint.lon !== newPoint.lon) {
                         updatedPath = [...existingPath, newPoint];
                     }
                     
-                    if (updatedPath.length > 500) updatedPath.shift(); // Store more points for replay
+                    if (updatedPath.length > 500) updatedPath.shift();
                     newPaths[id] = updatedPath;
                 });
                 return newPaths;
@@ -415,7 +390,7 @@ export default function App() {
             if (consecutiveFailsRef.current >= CONNECTION_FAIL_THRESHOLD) {
                 const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
                 setError(errorMessage);
-                setDrones({}); // Clear drone data on persistent connection loss
+                setDrones({});
             }
         }
     }, [apiPort]);
@@ -495,7 +470,7 @@ export default function App() {
     }, []);
 
     useEffect(() => {
-        if (isReplayMode) return; // Pause live updates during replay
+        if (isReplayMode) return;
 
         getStatus();
         getAnomalies();
@@ -529,8 +504,7 @@ export default function App() {
         }
     }, [getStatus, getAnomalies, getThreats, getAIActionRequests, getAITargetDesignations, getFlightSuggestions, getUFOs, getEliminationEvents, getCounterUASData, isReplayMode]);
     
-    // --- Alert Logic ---
-
+    // ... [Alert checking logic remains unchanged] ...
     const checkConnectionAlerts = useCallback(() => {
         const wasConnected = prevErrorRef.current === null;
         const isDisconnected = error !== null;
@@ -639,13 +613,10 @@ export default function App() {
             const currentDrone = drones[id];
             const prevDrone = prevDronesRef.current[id];
 
-            // Check for transition from MISSION to HOVERING_ON_TARGET
             if (prevDrone && prevDrone.status === DroneStatus.MISSION && currentDrone.status === DroneStatus.HOVERING_ON_TARGET) {
                 const target = currentDrone.mission_target;
                 if (target) {
-                    // Find if the target location matches any preset using a tolerance
                     const matchedPreset = missionPresets.find(p => locationMatches(p.location, target));
-
                     if (matchedPreset) {
                         const droneName = getDroneDisplayName(id);
                         addLogEntry(droneName, t('log.command.preset_mission_complete'), 'Success', t('log.details.reached_target', { presetName: matchedPreset.name }));
@@ -732,7 +703,6 @@ export default function App() {
             const prevStatus = geofenceStatusRef.current[objectKey] || null;
 
             if (currentStatus && (!prevStatus || prevStatus.fenceId !== currentStatus.fenceId)) {
-                // ENTRY event
                 const geofence = geofences.find(g => g.id === currentStatus!.fenceId)!;
                 if (geofence.alertOnEntry) {
                     const event: GeofenceEvent = {
@@ -756,7 +726,6 @@ export default function App() {
                     }
                 }
             } else if (!currentStatus && prevStatus) {
-                // EXIT event
                 const geofence = geofences.find(g => g.id === prevStatus.fenceId)!;
                  if (geofence && geofence.alertOnExit) {
                     const event: GeofenceEvent = {
@@ -804,7 +773,6 @@ export default function App() {
         checkAICompletionAlerts();
         checkPresetMissionCompletionAlerts();
 
-        // Update refs for next check
         prevDronesRef.current = drones;
         prevErrorRef.current = error;
         prevAnomaliesRef.current = anomalies;
@@ -815,13 +783,13 @@ export default function App() {
 
     }, [drones, error, anomalies, threats, aiActionRequests, aiTargetDesignations, healthScores, missionPresets, alertPreferences.master, isReplayMode, checkConnectionAlerts, checkDroneStatusAlerts, checkAnomalyAlerts, checkAIRequestAlerts, checkAITargetDesignationAlerts, checkThreatAlerts, checkAICompletionAlerts, checkPresetMissionCompletionAlerts]);
 
-    // Effect for Geofence Alerts (depends on UFOs too)
     useEffect(() => {
         if (!alertPreferences.master || isReplayMode) return;
         updateGeofenceStatus();
     }, [drones, ufos, geofences, alertPreferences.master, isReplayMode, updateGeofenceStatus]);
-
-
+    
+    // ... [Event handlers and other effects remain unchanged] ...
+    
     const handleDroneSelect = useCallback((id: string) => {
         setSelectedDroneId(id);
         setSelectedAnomalyId(null);
@@ -876,33 +844,29 @@ export default function App() {
     }, [selectedDroneId]);
 
     const highSeverityCounts = useMemo(() => {
-        // Start by initializing a count of 0 for every drone. This ensures every drone has an entry.
         const counts = Object.keys(drones).reduce((acc, droneId) => {
             acc[droneId] = 0;
             return acc;
         }, {} as Record<string, number>);
         
-        // Now, increment the count for any drone with a high-severity anomaly.
         anomalies.forEach(anomaly => {
             if (anomaly.severity === 'High' && anomaly.repairStatus === 'pending') {
-                // Ensure we only count anomalies for drones we are currently tracking.
                 if (counts.hasOwnProperty(anomaly.droneId)) {
                     counts[anomaly.droneId]++;
                 }
             }
         });
         return counts;
-    }, [drones, anomalies]); // Added `drones` dependency
+    }, [drones, anomalies]);
     
     useEffect(() => {
         const newHealthScores: Record<string, number> = {};
         Object.keys(drones).forEach(id => {
             const drone = drones[id];
-            // highSeverityCounts is now guaranteed to have an entry for every drone.
             const anomalyPenalty = highSeverityCounts[id] * 40;
             const baseScore = (drone.battery * 0.5) + (drone.signal_strength * 0.5);
             const finalScore = baseScore - anomalyPenalty;
-            newHealthScores[id] = Math.max(0, Math.min(100, finalScore)); // Clamp between 0-100
+            newHealthScores[id] = Math.max(0, Math.min(100, finalScore));
         });
         setHealthScores(newHealthScores);
     }, [drones, highSeverityCounts]);
@@ -959,7 +923,6 @@ export default function App() {
         const currentParams = { speed: drone.cruisingSpeed, altitude: drone.cruisingAltitude };
         const newParams = { ...currentParams, ...params };
 
-        // Optimistic UI Update
         setDrones(prevDrones => ({
             ...prevDrones,
             [droneId]: {
@@ -976,7 +939,6 @@ export default function App() {
             addLogEntry(getDroneDisplayName(droneId), commandName, 'Success', details);
         } catch (error) {
             addLogEntry(getDroneDisplayName(droneId), commandName, 'Failed', error instanceof Error ? error.message : 'Unknown error');
-            // Revert on failure
             setDrones(prevDrones => ({
                 ...prevDrones,
                 [droneId]: {
@@ -1030,7 +992,6 @@ export default function App() {
         }
     }, []);
     
-    // Replay Play/Pause Logic
     useEffect(() => {
         if (isReplaying && replayTargetId) {
             const path = flightPaths[replayTargetId];
@@ -1039,7 +1000,7 @@ export default function App() {
             replayIntervalRef.current = window.setInterval(() => {
                 setReplayProgress(prev => {
                     if (prev >= path.length - 1) {
-                        setIsReplaying(false); // Stop at the end
+                        setIsReplaying(false); 
                         return path.length - 1;
                     }
                     return prev + 1;
@@ -1152,7 +1113,6 @@ export default function App() {
     const submitMission = async (lat: number, lon: number, alt: number) => {
         if (!modalTarget) return;
 
-        // Deselect any active item to ensure map focus on the new mission target
         handleDeselect();
 
         const body = { target_lat: lat, target_lon: lon, target_alt: alt };
@@ -1205,8 +1165,8 @@ export default function App() {
 
         try {
             await postAITargetResponse(requestId, response);
-            await getAITargetDesignations(); // Re-fetch to clear the processed one
-            await getStatus(); // Re-fetch drone status as one may have been tasked
+            await getAITargetDesignations(); 
+            await getStatus(); 
         } catch (error) {
             addLogEntry(t('log.target.ai_targeting_system'), t('log.command.ai_target_response_failed'), 'Failed', t('log.details.failed_to_send_response', { error: error instanceof Error ? error.message : 'Unknown error' }));
         }
@@ -1263,7 +1223,6 @@ export default function App() {
         setIsChecklistModalOpen(false);
         setChecklistTargetId(null);
 
-        // Check if this confirmation is for a group launch from the queue
         if (targetId === 'group' && launchQueue) {
             const droneIds = launchQueue.target;
             const commandName = t('log.action.launch');
@@ -1277,12 +1236,11 @@ export default function App() {
             );
             
             await Promise.all(promises);
-            setLaunchQueue(null); // Clear the queue after processing
+            setLaunchQueue(null); 
             await getStatus();
             return;
         }
 
-        // Existing logic for single drone or fleet
         const isFleet = targetId === 'fleet';
         const targetName = isFleet ? t('log.target.fleet') : getDroneDisplayName(targetId);
         const commandName = t('log.action.launch');
@@ -1307,7 +1265,6 @@ export default function App() {
     const handleCeaseFire = useCallback(async (systemId: string) => {
         try {
             await postCounterUASCommand(systemId, 'cease_fire');
-            // Optimistically update or wait for next fetch
             await getCounterUASData();
         } catch (error) {
             console.error("Failed to send cease fire command", error);
@@ -1318,7 +1275,6 @@ export default function App() {
     const handleStartDrawingGeofence = useCallback(() => {
         setIsDrawingGeofence(true);
         setNewGeofencePoints([]);
-        // Deselect any items to give focus to map
         handleDeselect();
         mapRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [handleDeselect]);
@@ -1341,27 +1297,17 @@ export default function App() {
         setIsGeofenceModalOpen(true);
     }, [newGeofencePoints, t]);
 
-    /**
-     * Handles saving a new geofence after it has been drawn and configured in the modal.
-     * This function's primary responsibility is to update the application's state.
-     * The actual persistence to localStorage and API is handled by a useEffect hook
-     * that listens for changes to the `geofences` state.
-     * @param newGeofence - The properties of the new geofence (name, color, alerts) from the modal.
-     */
     const handleSaveGeofence = useCallback((newGeofence: Omit<Geofence, 'id' | 'points'>) => {
-        // Create the full geofence object with a new ID and the points drawn by the user.
         const geofenceToAdd: Geofence = {
             ...newGeofence,
             id: `gf_${Date.now()}`,
             points: newGeofencePoints,
         };
 
-        // Update the geofences state. This will trigger the persistence useEffect.
         setGeofences(prev => [...prev, geofenceToAdd]);
 
         addLogEntry(t('log.target.system'), t('log.command.geofence_created'), 'Success', t('log.details.zone_defined', { name: newGeofence.name }));
         
-        // Reset the UI state for creating a new geofence.
         setIsGeofenceModalOpen(false);
         setNewGeofencePoints([]);
     }, [newGeofencePoints, addLogEntry, t]);
@@ -1377,73 +1323,86 @@ export default function App() {
 
     return (
         <div>
-            <div className="container mx-auto px-4 md:px-8">
+            <div className="container mx-auto px-4 md:px-8 pb-8">
                 <Header />
+                
+                {/* Controls and Status Section */}
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
-                    <FleetControls
-                        onFleetCommand={handleFleetCommand}
-                        onShowMissionModal={() => showMissionModal('fleet')}
-                        drones={drones}
-                        selectedDroneId={selectedDroneId}
-                        onIndividualMissionParamsChange={handleIndividualMissionParamsChange}
-                        getDroneDisplayName={getDroneDisplayName}
-                    />
+                    <WindowFrame title={t('fleet_controls.title')}>
+                        <FleetControls
+                            onFleetCommand={handleFleetCommand}
+                            onShowMissionModal={() => showMissionModal('fleet')}
+                            drones={drones}
+                            selectedDroneId={selectedDroneId}
+                            onIndividualMissionParamsChange={handleIndividualMissionParamsChange}
+                            getDroneDisplayName={getDroneDisplayName}
+                        />
+                    </WindowFrame>
                     <div className="space-y-8">
-                        {/* FIX: The Array.prototype.sort() compare function was incorrect, returning a CounterUASSystem object instead of a number. This has been corrected to sort by the system's ID string. */}
                         {(Object.values(counterUASSystems) as CounterUASSystem[]).sort((a: CounterUASSystem, b: CounterUASSystem) => a.id.localeCompare(b.id)).map((system: CounterUASSystem) => (
-                            <CounterUASPanel 
-                                key={system.id} 
-                                system={system} 
-                                onCeaseFire={() => handleCeaseFire(system.id)} 
-                            />
+                            <WindowFrame key={system.id} title={t('counter_uas.title_id', { id: system.id.split('-')[0].toUpperCase() })}>
+                                <CounterUASPanel 
+                                    system={system} 
+                                    onCeaseFire={() => handleCeaseFire(system.id)} 
+                                />
+                            </WindowFrame>
                         ))}
-                        <GeofencePanel
-                            geofences={geofences}
-                            onStartDrawing={handleStartDrawingGeofence}
-                            onDelete={handleDeleteGeofence}
-                        />
-                         <AudioAlerts
-                            preferences={alertPreferences}
-                            onPreferencesChange={setAlertPreferences}
-                            availableVoices={availableVoices}
-                        />
+                        <WindowFrame title={t('geofence.title')}>
+                            <GeofencePanel
+                                geofences={geofences}
+                                onStartDrawing={handleStartDrawingGeofence}
+                                onDelete={handleDeleteGeofence}
+                            />
+                        </WindowFrame>
+                        <WindowFrame title={t('audio_alerts.title')}>
+                             <AudioAlerts
+                                preferences={alertPreferences}
+                                onPreferencesChange={setAlertPreferences}
+                                availableVoices={availableVoices}
+                            />
+                        </WindowFrame>
                     </div>
                 </div>
 
+                {/* Map and Video Section */}
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8" ref={mapRef}>
-                    <DroneMap
-                        drones={drones}
-                        selectedDroneId={selectedDroneId}
-                        flightPaths={flightPaths}
-                        anomalies={anomalies}
-                        selectedAnomalyId={selectedAnomalyId}
-                        threats={threats}
-                        selectedThreatId={selectedThreatId}
-                        aiTargetDesignations={aiTargetDesignations}
-                        selectedTargetDesignationId={selectedTargetDesignationId}
-                        geofences={geofences}
-                        isDrawingGeofence={isDrawingGeofence}
-                        newGeofencePoints={newGeofencePoints}
-                        ufos={ufos}
-                        geofenceEvents={geofenceEvents}
-                        selectedGeofenceEventId={selectedGeofenceEventId}
-                        eliminationEvents={eliminationEvents}
-                        counterUAS={counterUASSystems}
-                        onDroneSelect={handleDroneSelect}
-                        onAnomalySelect={handleAnomalySelect}
-                        onThreatSelect={handleThreatSelect}
-                        onDeselect={handleDeselect}
-                        onAddGeofencePoint={handleAddGeofencePoint}
-                        onCancelDrawing={handleCancelDrawingGeofence}
-                        onFinishDrawing={handleFinishDrawingGeofence}
-                        isReplayMode={isReplayMode}
-                        replayDroneId={replayTargetId}
-                        replayProgressIndex={replayProgress}
-                        droneNicknames={droneNicknames}
-                        showGeofences={showGeofences}
-                        getDroneDisplayName={getDroneDisplayName}
-                    />
-                    <VideoFeedsPanel drones={drones} droneNicknames={droneNicknames} />
+                    <WindowFrame title="Live Geo-Spatial Map" className="h-full">
+                        <DroneMap
+                            drones={drones}
+                            selectedDroneId={selectedDroneId}
+                            flightPaths={flightPaths}
+                            anomalies={anomalies}
+                            selectedAnomalyId={selectedAnomalyId}
+                            threats={threats}
+                            selectedThreatId={selectedThreatId}
+                            aiTargetDesignations={aiTargetDesignations}
+                            selectedTargetDesignationId={selectedTargetDesignationId}
+                            geofences={geofences}
+                            isDrawingGeofence={isDrawingGeofence}
+                            newGeofencePoints={newGeofencePoints}
+                            ufos={ufos}
+                            geofenceEvents={geofenceEvents}
+                            selectedGeofenceEventId={selectedGeofenceEventId}
+                            eliminationEvents={eliminationEvents}
+                            counterUAS={counterUASSystems}
+                            onDroneSelect={handleDroneSelect}
+                            onAnomalySelect={handleAnomalySelect}
+                            onThreatSelect={handleThreatSelect}
+                            onDeselect={handleDeselect}
+                            onAddGeofencePoint={handleAddGeofencePoint}
+                            onCancelDrawing={handleCancelDrawingGeofence}
+                            onFinishDrawing={handleFinishDrawingGeofence}
+                            isReplayMode={isReplayMode}
+                            replayDroneId={replayTargetId}
+                            replayProgressIndex={replayProgress}
+                            droneNicknames={droneNicknames}
+                            showGeofences={showGeofences}
+                            getDroneDisplayName={getDroneDisplayName}
+                        />
+                    </WindowFrame>
+                    <WindowFrame title={t('video_feeds.title', { count: Object.values(drones).filter(d => [DroneStatus.MISSION, DroneStatus.HOVERING_ON_TARGET, DroneStatus.AI_OVERRIDE].includes(d.status)).length })} className="h-full">
+                        <VideoFeedsPanel drones={drones} droneNicknames={droneNicknames} />
+                    </WindowFrame>
                 </div>
                 
                 {isReplayMode && replayPath && (
@@ -1461,66 +1420,95 @@ export default function App() {
                     />
                 )}
 
-                <AIActionRequests
-                    requests={aiActionRequests}
-                    onRespond={handleAIActionResponse}
-                    onOverride={handleAIActionOverride}
-                    getDroneDisplayName={getDroneDisplayName}
-                />
-                <AITargetDesignations
-                    designations={aiTargetDesignations}
-                    onRespond={handleAITargetResponse}
-                    onSelect={handleTargetDesignationSelect}
-                    getDroneDisplayName={getDroneDisplayName}
-                    drones={drones}
-                />
-                <FlightPathAnalysis
-                    suggestions={flightSuggestions}
-                    onRespond={handleFlightSuggestionResponse}
-                    getDroneDisplayName={getDroneDisplayName}
-                />
-                <ThreatFeed
-                    threats={threats}
-                    onSelectThreat={handleThreatSelect}
-                    selectedThreatId={selectedThreatId}
-                    onRespondToThreat={handleRespondToThreat}
-                />
-                <AnomalyFeed
-                    anomalies={anomalies}
-                    onSelectAnomaly={handleAnomalySelect}
-                    onInitiateRepair={handleInitiateRepair}
-                    selectedAnomalyId={selectedAnomalyId}
-                    droneNicknames={droneNicknames}
-                />
-                <GeofenceEventLog
-                    events={geofenceEvents}
-                    ufos={ufos}
-                    onSelectEvent={handleGeofenceEventSelect}
-                />
+                {/* AI and Intelligence Section */}
+                <div className="space-y-8 mb-8">
+                    <WindowFrame title={t('ai_requests.title', { count: aiActionRequests.length })}>
+                        <AIActionRequests
+                            requests={aiActionRequests}
+                            onRespond={handleAIActionResponse}
+                            onOverride={handleAIActionOverride}
+                            getDroneDisplayName={getDroneDisplayName}
+                        />
+                    </WindowFrame>
+                    
+                    <WindowFrame title={t('ai_targets.title', { count: aiTargetDesignations.length })}>
+                        <AITargetDesignations
+                            designations={aiTargetDesignations}
+                            onRespond={handleAITargetResponse}
+                            onSelect={handleTargetDesignationSelect}
+                            getDroneDisplayName={getDroneDisplayName}
+                            drones={drones}
+                        />
+                    </WindowFrame>
+                    
+                    <WindowFrame title={t('path_intelligence.title', { count: flightSuggestions.length })}>
+                        <FlightPathAnalysis
+                            suggestions={flightSuggestions}
+                            onRespond={handleFlightSuggestionResponse}
+                            getDroneDisplayName={getDroneDisplayName}
+                        />
+                    </WindowFrame>
+                </div>
+
+                {/* Feeds Section */}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 mb-8">
+                    <WindowFrame title={t('threat_feed.title', { count: threats.length })}>
+                        <ThreatFeed
+                            threats={threats}
+                            onSelectThreat={handleThreatSelect}
+                            selectedThreatId={selectedThreatId}
+                            onRespondToThreat={handleRespondToThreat}
+                        />
+                    </WindowFrame>
+                    <WindowFrame title={t('anomaly_feed.title')}>
+                        <AnomalyFeed
+                            anomalies={anomalies}
+                            onSelectAnomaly={handleAnomalySelect}
+                            onInitiateRepair={handleInitiateRepair}
+                            selectedAnomalyId={selectedAnomalyId}
+                            droneNicknames={droneNicknames}
+                        />
+                    </WindowFrame>
+                    <WindowFrame title={t('geofence_event_log.title')}>
+                        <GeofenceEventLog
+                            events={geofenceEvents}
+                            ufos={ufos}
+                            onSelectEvent={handleGeofenceEventSelect}
+                        />
+                    </WindowFrame>
+                </div>
+
+                {/* Fleet Management Section */}
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-8">
                     <div className="xl:col-span-2">
-                         <DroneFleet
-                            drones={drones}
-                            error={error}
-                            onSingleCommand={handleSingleDroneCommand}
-                            onShowMissionModal={showMissionModal}
-                            selectedDroneId={selectedDroneId}
-                            highSeverityCounts={highSeverityCounts}
-                            healthScores={healthScores}
-                            flightPaths={flightPaths}
-                            droneNicknames={droneNicknames}
-                            onSetNickname={handleSetNickname}
-                            onGroupCommand={handleGroupCommand}
-                            threats={threats}
-                            ufos={ufos}
-                        />
+                        <WindowFrame title="Drone Fleet Overview">
+                             <DroneFleet
+                                drones={drones}
+                                error={error}
+                                onSingleCommand={handleSingleDroneCommand}
+                                onShowMissionModal={showMissionModal}
+                                selectedDroneId={selectedDroneId}
+                                highSeverityCounts={highSeverityCounts}
+                                healthScores={healthScores}
+                                flightPaths={flightPaths}
+                                droneNicknames={droneNicknames}
+                                onSetNickname={handleSetNickname}
+                                onGroupCommand={handleGroupCommand}
+                                threats={threats}
+                                ufos={ufos}
+                            />
+                        </WindowFrame>
                     </div>
                     <div className="space-y-8">
-                        <AICommAssistant />
+                        <WindowFrame title={t('comm_assistant.title')}>
+                            <AICommAssistant />
+                        </WindowFrame>
                     </div>
                 </div>
 
-                <CommandLog logEntries={commandLog} />
+                <WindowFrame title={t('command_log.title')}>
+                    <CommandLog logEntries={commandLog} />
+                </WindowFrame>
 
                  <SettingsPanel
                     port={apiPort}

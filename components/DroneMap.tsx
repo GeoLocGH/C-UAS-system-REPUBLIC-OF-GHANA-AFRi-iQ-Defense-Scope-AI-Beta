@@ -3,6 +3,7 @@ import { DroneStatus, type Drones, type Location, type FlightPaths, type Anomaly
 import { useTranslation } from '../contexts/I18nContext';
 import { METERS_TO_FEET } from '../constants';
 
+// ... [Props interface and helper functions remain unchanged] ...
 // Let TypeScript know that 'L' is a global object from the Leaflet script
 declare const L: any;
 
@@ -39,6 +40,7 @@ interface DroneMapProps {
     getDroneDisplayName: (droneId: string) => string;
 }
 
+// ... [Helper functions like getAnomalyIcon, getDroneIconSVG, etc. remain unchanged] ...
 const getAnomalyIcon = (anomaly: Anomaly) => {
     const severityColors: Record<string, string> = { High: 'text-red-500', Medium: 'text-yellow-400', Low: 'text-blue-400' };
     
@@ -102,7 +104,7 @@ const getThreatIcon = (threat: Threat) => {
     const color = severityColors[threat.severity];
 
     if (threat.type === ThreatType.UNIDENTIFIED_DRONE) {
-        const droneIconPath = `<path fill-rule="evenodd" d="M11 11V7.5a.5.5 0 011 0V11h3.5a.5.5 0 010 1H12v3.5a.5.5 0 01-1 0V12H7.5a.5.5 0 010-1H11zM12 1a2 2 0 100 4 2 2 0 000-4zM2 11a2 2 0 104 0 2 2 0 00-4 0zm9 9a2 2 0 100 4 2 2 0 000-4zm9-9a2 2 0 104 0 2 2 0 00-4 0z" clip-rule="evenodd" />`;
+        const droneIconPath = `<path fill-rule="evenodd" d="M11 11V7.5a.5.5 0 011 0V11h3.5a.5.5 0 010 1H12v3.5a.5.5 0 01-1 0V12H7.5a.5.5 0 010-1H11zM12 1a2 2 0 100 4 2 2 0 000-4zm2 11a2 2 0 104 0 2 2 0 00-4 0zm9 9a2 2 0 100 4 2 2 0 000-4zm9-9a2 2 0 104 0 2 2 0 00-4 0z" clip-rule="evenodd" />`;
         return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${color}" class="w-8 h-8">${droneIconPath}</svg>`;
     }
 
@@ -123,7 +125,7 @@ const getUFOIcon = (ufo: UnidentifiedFlyingObject) => {
             break;
         case 'fpv_drone':
         case 'unknown_uav':
-            path = `<path fill-rule="evenodd" d="M11 11V7.5a.5.5 0 011 0V11h3.5a.5.5 0 010 1H12v3.5a.5.5 0 01-1 0V12H7.5a.5.5 0 010-1H11zM12 1a2 2 0 100 4 2 2 0 000-4zM2 11a2 2 0 104 0 2 2 0 00-4 0zm9 9a2 2 0 100 4 2 2 0 000-4zm9-9a2 2 0 104 0 2 2 0 00-4 0z" clip-rule="evenodd" />`;
+            path = `<path fill-rule="evenodd" d="M11 11V7.5a.5.5 0 011 0V11h3.5a.5.5 0 010 1H12v3.5a.5.5 0 01-1 0V12H7.5a.5.5 0 010-1H11zM12 1a2 2 0 100 4 2 2 0 000-4zm2 11a2 2 0 104 0 2 2 0 00-4 0zm9 9a2 2 0 100 4 2 2 0 000-4zm9-9a2 2 0 104 0 2 2 0 00-4 0z" clip-rule="evenodd" />`;
             break;
         case 'commercial_jet':
         case 'private_plane':
@@ -163,6 +165,8 @@ export const DroneMap: React.FC<DroneMapProps> = ({
     const { t } = useTranslation();
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<any>(null);
+    
+    // ... [Existing Refs remain unchanged] ...
     const droneMarkersRef = useRef<Record<string, any>>({});
     const headingsRef = useRef<Record<string, number>>({});
     const pathLayersRef = useRef<Record<string, any>>({});
@@ -183,70 +187,52 @@ export const DroneMap: React.FC<DroneMapProps> = ({
 
     const [isUserPanned, setIsUserPanned] = useState(false);
 
-    // Map Initialization
+    // ... [Existing Map Initialization and Logic remain unchanged] ...
     useEffect(() => {
         if (mapContainerRef.current && !mapRef.current) {
             const map = L.map(mapContainerRef.current, {
                 center: [5.649133, -0.0722325],
                 zoom: 12,
             });
-
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
                 subdomains: 'abcd',
                 maxZoom: 20
             }).addTo(map);
-
             map.on('dragstart', () => setIsUserPanned(true));
             map.on('zoomstart', () => setIsUserPanned(true));
             mapRef.current = map;
-
-            // Add zoom listener for dynamic label scaling
             const baseZoom = 12;
-            const baseFontSize = 12; // px
-
+            const baseFontSize = 12; 
             const updateLabelStyles = () => {
                 const mapNode = map.getContainer();
-                // Check if map container is still in the DOM before proceeding
                 if (!document.body.contains(mapNode)) return;
-
                 const currentZoom = map.getZoom();
-                // Use a power of 1.4 for a less aggressive scaling than doubling each time
                 const scale = Math.pow(1.4, currentZoom - baseZoom);
-                
-                // Calculate new style values, clamping them within reasonable min/max bounds
                 const newFontSize = Math.max(8, Math.min(32, baseFontSize * scale));
                 const newPaddingY = Math.max(2, Math.min(8, 4 * scale));
                 const newPaddingX = Math.max(4, Math.min(16, 8 * scale));
                 const newBorderRadius = Math.max(2, Math.min(8, 4 * scale));
-
-                // Set CSS variables on the map container element
                 mapNode.style.setProperty('--geofence-font-size', `${newFontSize.toFixed(2)}px`);
                 mapNode.style.setProperty('--geofence-padding-y', `${newPaddingY.toFixed(2)}px`);
                 mapNode.style.setProperty('--geofence-padding-x', `${newPaddingX.toFixed(2)}px`);
                 mapNode.style.setProperty('--geofence-border-radius', `${newBorderRadius.toFixed(2)}px`);
             };
-
             map.on('zoomend', updateLabelStyles);
-            updateLabelStyles(); // Initial call to set styles
+            updateLabelStyles(); 
         }
-
         return () => {
             if (mapRef.current) {
                 mapRef.current.remove();
                 mapRef.current = null;
             }
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-
-    // Effect to handle map clicks for drawing geofences or deselecting items.
-    // This is separated from the map initialization to ensure it always has
-    // the latest props (like isDrawingGeofence) and avoids stale closures.
+    
+    // ... [Rest of the hooks remain unchanged] ...
     useEffect(() => {
         const map = mapRef.current;
         if (!map) return;
-        
         const handleClick = (e: any) => {
             if (isDrawingGeofence) {
                 onAddGeofencePoint({ lat: e.latlng.lat, lon: e.latlng.lng });
@@ -254,24 +240,20 @@ export const DroneMap: React.FC<DroneMapProps> = ({
                 onDeselect();
             }
         };
-
         map.on('click', handleClick);
-
         return () => {
             map.off('click', handleClick);
         };
     }, [isDrawingGeofence, onAddGeofencePoint, onDeselect]);
 
-
+    // ... [All other markers and layers effects remain unchanged] ...
     // Drone Markers
     useEffect(() => {
         if (!mapRef.current || isReplayMode) return;
         const map = mapRef.current;
-        
         Object.keys(drones).forEach(id => {
             const drone = drones[id];
             const isSelected = id === selectedDroneId;
-
             let heading = headingsRef.current[id] || 0;
             const path = flightPaths[id];
             if (path && path.length >= 2) {
@@ -282,10 +264,8 @@ export const DroneMap: React.FC<DroneMapProps> = ({
                     headingsRef.current[id] = heading;
                 }
             }
-            
             const iconHtml = getDroneIconSVG(drone, isSelected, heading);
             const icon = L.divIcon({ html: iconHtml, className: '', iconSize: [32, 32], iconAnchor: [16, 16] });
-
             if (droneMarkersRef.current[id]) {
                 droneMarkersRef.current[id].setLatLng([drone.location.lat, drone.location.lon]).setIcon(icon);
             } else {
@@ -295,7 +275,6 @@ export const DroneMap: React.FC<DroneMapProps> = ({
             }
             droneMarkersRef.current[id].bindTooltip(getDroneDisplayName(id));
         });
-
         Object.keys(droneMarkersRef.current).forEach(id => {
             if (!drones[id]) {
                 droneMarkersRef.current[id].remove();
@@ -304,57 +283,34 @@ export const DroneMap: React.FC<DroneMapProps> = ({
             }
         });
     }, [drones, selectedDroneId, onDroneSelect, droneNicknames, isReplayMode, getDroneDisplayName, flightPaths]);
-
-    // Anomaly Markers
+    
+    // ... [Anomaly Markers effect] ...
     useEffect(() => {
         if (!mapRef.current) return;
         const map = mapRef.current;
         const activeAnomalyIdsOnMap = new Set();
-
         anomalies.forEach(anomaly => {
-            // If anomaly is repaired and we haven't handled its removal yet, start fade-out.
             if (anomaly.repairStatus === 'repaired' && !handledRepairedAnomaliesRef.current.has(anomaly.id)) {
                 const marker = anomalyMarkersRef.current[anomaly.id];
                 if (marker) {
-                    // Mark as handled to prevent this from running again.
                     handledRepairedAnomaliesRef.current.add(anomaly.id);
-                    
-                    // Update icon to 'repaired' state one last time
                     const { icon: iconHtml } = getAnomalyIcon(anomaly);
-                    const repairedIcon = L.divIcon({
-                        html: iconHtml,
-                        className: '', // No special class here
-                        iconSize: [32, 32],
-                        iconAnchor: [16, 16],
-                    });
+                    const repairedIcon = L.divIcon({ html: iconHtml, className: '', iconSize: [32, 32], iconAnchor: [16, 16] });
                     marker.setIcon(repairedIcon);
-
-                    // Add fade-out class to the marker's element.
                     const iconElement = marker.getElement();
-                    if (iconElement) {
-                        iconElement.classList.add('marker-fade-out');
-                    }
-                    
-                    // Set a timer to remove the marker from the map after the animation.
+                    if (iconElement) { iconElement.classList.add('marker-fade-out'); }
                     setTimeout(() => {
                         if (anomalyMarkersRef.current[anomaly.id]) {
                             anomalyMarkersRef.current[anomaly.id].remove();
                             delete anomalyMarkersRef.current[anomaly.id];
                         }
-                    }, 1000); // Must match CSS animation duration (1s).
+                    }, 1000); 
                 }
-                return; // Don't process this anomaly further.
+                return; 
             }
-
-            // If it's repaired and has been handled, or is in the process of fading, skip it.
-            if (handledRepairedAnomaliesRef.current.has(anomaly.id)) {
-                return;
-            }
-
-            // This anomaly should be on the map.
+            if (handledRepairedAnomaliesRef.current.has(anomaly.id)) { return; }
             activeAnomalyIdsOnMap.add(anomaly.id);
             const isSelected = anomaly.id === selectedAnomalyId;
-            
             const { icon: iconHtml } = getAnomalyIcon(anomaly);
             const icon = L.divIcon({
                 html: iconHtml,
@@ -362,7 +318,6 @@ export const DroneMap: React.FC<DroneMapProps> = ({
                 iconSize: [32, 32],
                 iconAnchor: [16, 16],
             });
-
             if (anomalyMarkersRef.current[anomaly.id]) {
                 anomalyMarkersRef.current[anomaly.id].setLatLng([anomaly.location.lat, anomaly.location.lon]).setIcon(icon);
             } else {
@@ -373,24 +328,19 @@ export const DroneMap: React.FC<DroneMapProps> = ({
             const popupContent = `<b>${t('map.popup.anomaly_title', { type: anomaly.type })}</b><br/>${t('map.popup.anomaly_severity', { severity: anomaly.severity })}<br/>${t('map.popup.anomaly_drone', { droneName: getDroneDisplayName(anomaly.droneId) })}`;
             anomalyMarkersRef.current[anomaly.id].bindPopup(popupContent);
         });
-
-        // Cleanup: Remove any markers for anomalies that are no longer in the props list
         Object.keys(anomalyMarkersRef.current).forEach(id => {
             if (!activeAnomalyIdsOnMap.has(id) && !handledRepairedAnomaliesRef.current.has(id)) {
                 anomalyMarkersRef.current[id].remove();
                 delete anomalyMarkersRef.current[id];
             }
         });
-
     }, [anomalies, selectedAnomalyId, onAnomalySelect, getDroneDisplayName, t]);
 
-
-    // Threat Markers
+    // ... [Threat Markers effect] ...
     useEffect(() => {
         if (!mapRef.current) return;
         const map = mapRef.current;
         const currentThreatIds = new Set(threats.map(t => t.id));
-
         threats.forEach(threat => {
             const isSelected = threat.id === selectedThreatId;
             const iconHtml = getThreatIcon(threat);
@@ -408,37 +358,30 @@ export const DroneMap: React.FC<DroneMapProps> = ({
                 threatMarkersRef.current[threat.id] = marker;
             }
         });
-
-        // Handle removed threats with fade-out
         Object.keys(threatMarkersRef.current).forEach(id => {
             if (!currentThreatIds.has(id) && !fadingOutThreatsRef.current.has(id)) {
                 const marker = threatMarkersRef.current[id];
                 if (marker) {
                     fadingOutThreatsRef.current.add(id);
-
                     const iconElement = marker.getElement();
-                    if (iconElement) {
-                        iconElement.classList.add('marker-fade-out');
-                    }
-
+                    if (iconElement) { iconElement.classList.add('marker-fade-out'); }
                     setTimeout(() => {
                         if (threatMarkersRef.current[id]) {
                             threatMarkersRef.current[id].remove();
                             delete threatMarkersRef.current[id];
                             fadingOutThreatsRef.current.delete(id);
                         }
-                    }, 1000); // Corresponds to animation duration
+                    }, 1000); 
                 }
             }
         });
     }, [threats, selectedThreatId, onThreatSelect]);
 
-    // AI Target Designation Markers
+    // ... [AI Target Markers effect] ...
     useEffect(() => {
         if (!mapRef.current) return;
         const map = mapRef.current;
         const existingIds = new Set();
-
         const iconHtml = (isSelected: boolean) => `
             <div class="relative flex items-center justify-center w-8 h-8">
                 <div class="absolute w-8 h-8 bg-cyan-500 rounded-full opacity-75 target-marker-pulse"></div>
@@ -447,26 +390,18 @@ export const DroneMap: React.FC<DroneMapProps> = ({
                 </svg>
             </div>
         `;
-
         aiTargetDesignations.forEach(designation => {
             existingIds.add(designation.id);
             const isSelected = designation.id === selectedTargetDesignationId;
-            const icon = L.divIcon({
-                html: iconHtml(isSelected),
-                className: '',
-                iconSize: [32, 32],
-                iconAnchor: [16, 16],
-            });
+            const icon = L.divIcon({ html: iconHtml(isSelected), className: '', iconSize: [32, 32], iconAnchor: [16, 16] });
             if (aiTargetMarkersRef.current[designation.id]) {
                 aiTargetMarkersRef.current[designation.id].setLatLng([designation.targetLocation.lat, designation.targetLocation.lon]).setIcon(icon);
             } else {
                 const marker = L.marker([designation.targetLocation.lat, designation.targetLocation.lon], { icon, zIndexOffset: 2500 }).addTo(map);
-                // No click handler on the marker itself; clicking is handled by the card in the UI panel.
                 aiTargetMarkersRef.current[designation.id] = marker;
             }
             aiTargetMarkersRef.current[designation.id].bindTooltip(`AI Target: ${designation.reason}`);
         });
-
         Object.keys(aiTargetMarkersRef.current).forEach(id => {
             if (!existingIds.has(id)) {
                 aiTargetMarkersRef.current[id].remove();
@@ -475,62 +410,50 @@ export const DroneMap: React.FC<DroneMapProps> = ({
         });
     }, [aiTargetDesignations, selectedTargetDesignationId]);
 
-     // UFO Markers
+     // ... [UFO Markers effect] ...
     useEffect(() => {
         if (!mapRef.current) return;
         const map = mapRef.current;
         const currentUFOIds = new Set(ufos.map(u => u.id));
-
         ufos.forEach(ufo => {
             const iconHtml = getUFOIcon(ufo);
             const icon = L.divIcon({ html: iconHtml, className: '', iconSize: [28, 28], iconAnchor: [14, 14] });
-
             if (ufoMarkersRef.current[ufo.id]) {
                 ufoMarkersRef.current[ufo.id].setLatLng([ufo.location.lat, ufo.location.lon]).setIcon(icon);
             } else {
                 ufoMarkersRef.current[ufo.id] = L.marker([ufo.location.lat, ufo.location.lon], { icon, zIndexOffset: 200 }).addTo(map);
             }
         });
-
-        // Handle removed UFOs with fade-out
         Object.keys(ufoMarkersRef.current).forEach(id => {
             if (!currentUFOIds.has(id) && !fadingOutUFOsRef.current.has(id)) {
                 const marker = ufoMarkersRef.current[id];
                 if (marker) {
                     fadingOutUFOsRef.current.add(id);
-
                     const iconElement = marker.getElement();
-                    if (iconElement) {
-                        iconElement.classList.add('marker-fade-out');
-                    }
-
+                    if (iconElement) { iconElement.classList.add('marker-fade-out'); }
                     setTimeout(() => {
                         if (ufoMarkersRef.current[id]) {
                             ufoMarkersRef.current[id].remove();
                             delete ufoMarkersRef.current[id];
                             fadingOutUFOsRef.current.delete(id);
                         }
-                    }, 1000); // Corresponds to animation duration
+                    }, 1000); 
                 }
             }
         });
     }, [ufos]);
 
-
-    // Flight Path Polylines
+    // ... [Flight Path Layers effect] ...
     useEffect(() => {
         if (!mapRef.current) return;
         const map = mapRef.current;
-
         Object.keys(flightPaths).forEach(id => {
             const path = flightPaths[id];
             const drone = drones[id];
             if (!drone) return;
-
             const isSelected = id === selectedDroneId;
-            const color = isSelected ? '#2dd4bf' : '#4f46e5'; // cyan-400 or indigo-600
+            const color = isSelected ? '#2dd4bf' : '#4f46e5'; 
             const weight = isSelected ? 4 : 2;
-
             if (path.length > 1) {
                 const latlngs = path.map(p => [p.lat, p.lon]);
                 if (pathLayersRef.current[id]) {
@@ -540,8 +463,6 @@ export const DroneMap: React.FC<DroneMapProps> = ({
                 }
             }
         });
-        
-        // Remove polylines for drones that no longer exist
         Object.keys(pathLayersRef.current).forEach(id => {
             if (!drones[id] || !flightPaths[id] || flightPaths[id].length < 2) {
                 pathLayersRef.current[id].remove();
@@ -550,13 +471,11 @@ export const DroneMap: React.FC<DroneMapProps> = ({
         });
     }, [flightPaths, selectedDroneId, drones]);
 
-
-    // Mission Target Markers
+    // ... [Mission Targets effect] ...
     useEffect(() => {
         if (!mapRef.current) return;
         const map = mapRef.current;
         const activeMissionTargets = new Set();
-        
         Object.keys(drones).forEach(id => {
             const drone = drones[id];
             if (drone.mission_target && [DroneStatus.MISSION, DroneStatus.AI_OVERRIDE].includes(drone.status)) {
@@ -568,9 +487,7 @@ export const DroneMap: React.FC<DroneMapProps> = ({
                             <path stroke-linecap="round" stroke-linejoin="round" d="M18 12H6" />
                         </svg>
                     </div>`;
-
                 const icon = L.divIcon({ html: iconHtml, className: '', iconSize: [32, 32], iconAnchor: [16, 16] });
-
                 if (missionTargetMarkersRef.current[id]) {
                     missionTargetMarkersRef.current[id].setLatLng([drone.mission_target.lat, drone.mission_target.lon]).setIcon(icon);
                 } else {
@@ -578,22 +495,19 @@ export const DroneMap: React.FC<DroneMapProps> = ({
                 }
             }
         });
-        
         Object.keys(missionTargetMarkersRef.current).forEach(id => {
             if (!activeMissionTargets.has(id)) {
                 missionTargetMarkersRef.current[id].remove();
                 delete missionTargetMarkersRef.current[id];
             }
         });
-
     }, [drones]);
 
-    // Geofence Polygons
+    // ... [Geofence Layers effect] ...
     useEffect(() => {
         if (!mapRef.current) return;
         const map = mapRef.current;
         const currentFenceIds = new Set(geofences.map(f => f.id));
-
         if (showGeofences) {
             geofences.forEach(fence => {
                 const latlngs = fence.points.map(p => [p.lat, p.lon]);
@@ -607,8 +521,6 @@ export const DroneMap: React.FC<DroneMapProps> = ({
                 }
             });
         }
-
-        // Cleanup: remove geofences that are no longer present or if visibility is toggled off
         Object.keys(geofenceLayersRef.current).forEach(id => {
             if (!showGeofences || !currentFenceIds.has(id)) {
                 geofenceLayersRef.current[id].remove();
@@ -617,53 +529,35 @@ export const DroneMap: React.FC<DroneMapProps> = ({
         });
     }, [geofences, showGeofences]);
 
-    // Geofence Drawing Layer
+    // ... [Drawing Geofence effect] ...
     useEffect(() => {
         const map = mapRef.current;
         if (!map) return;
-        
-        // Remove existing layer before drawing a new one
         if (newGeofenceLayerRef.current) {
             newGeofenceLayerRef.current.remove();
             newGeofenceLayerRef.current = null;
         }
-
         if (isDrawingGeofence && newGeofencePoints.length > 0) {
             const latlngs = newGeofencePoints.map(p => [p.lat, p.lon]);
-            
-            // Create a layer group to hold the line and the markers
             const layerGroup = L.layerGroup().addTo(map);
-            
-            // Draw a polyline connecting the points
             L.polyline(latlngs, { color: '#2dd4bf', weight: 3, dashArray: '5, 10' }).addTo(layerGroup);
-            
-            // Add markers for each point
             newGeofencePoints.forEach(point => {
                 L.circleMarker([point.lat, point.lon], {
-                    radius: 6,
-                    color: '#fff',
-                    weight: 2,
-                    fillColor: '#2dd4bf',
-                    fillOpacity: 1
+                    radius: 6, color: '#fff', weight: 2, fillColor: '#2dd4bf', fillOpacity: 1
                 }).addTo(layerGroup);
             });
-            
             newGeofenceLayerRef.current = layerGroup;
         }
-
     }, [isDrawingGeofence, newGeofencePoints]);
 
-    // Geofence Event Marker
+    // ... [Event Marker effect] ...
     useEffect(() => {
         const map = mapRef.current;
         if (!map) return;
-
-        // Remove previous event marker
         if (eventMarkerRef.current) {
             eventMarkerRef.current.remove();
             eventMarkerRef.current = null;
         }
-
         if (selectedGeofenceEventId) {
             const event = geofenceEvents.find(e => e.id === selectedGeofenceEventId);
             if (event) {
@@ -675,13 +569,11 @@ export const DroneMap: React.FC<DroneMapProps> = ({
                         </svg>
                     </div>`;
                 const icon = L.divIcon({ html: iconHtml, className: '', iconSize: [32, 32], iconAnchor: [16, 16] });
-                
                 const altitudeText = event.altitude != null ? `${(event.altitude * METERS_TO_FEET).toFixed(0)} ft` : 'N/A';
                 const speedText = event.speed != null ? `${event.speed.toFixed(0)} km/h` : 'N/A';
                 const headingText = event.heading != null ? `${event.heading.toFixed(0)}°` : 'N/A';
                 const eventTypeText = t(`geofence_event_log.event.${event.eventType}`);
-                const eventTypeColor = event.eventType === 'entry' ? '#FBBF24' : '#60A5FA'; // amber-400 or blue-400
-
+                const eventTypeColor = event.eventType === 'entry' ? '#FBBF24' : '#60A5FA';
                 const popupContent = `
                     <div class="text-base">
                         <strong>${event.objectDisplayName}</strong><br>
@@ -699,12 +591,10 @@ export const DroneMap: React.FC<DroneMapProps> = ({
                         </ul>
                     </div>
                 `;
-                
                 eventMarkerRef.current = L.marker([event.location.lat, event.location.lon], { icon, zIndexOffset: 2000 })
                     .addTo(map)
                     .bindPopup(popupContent)
                     .openPopup();
-                
                 eventMarkerRef.current.on('popupclose', () => {
                     onDeselect();
                 });
@@ -712,121 +602,66 @@ export const DroneMap: React.FC<DroneMapProps> = ({
         }
     }, [selectedGeofenceEventId, geofenceEvents, t, onDeselect]);
 
-    // Elimination Events (Explosions)
+    // ... [Elimination Events effect] ...
     useEffect(() => {
         if (!mapRef.current || eliminationEvents.length === 0) return;
         const map = mapRef.current;
-
         eliminationEvents.forEach(event => {
             if (!processedEventsRef.current.has(event.timestamp)) {
                 processedEventsRef.current.add(event.timestamp);
-
                 const iconHtml = `<div class="explosion-marker" style="width: 20px; height: 20px;"></div>`;
-                const icon = L.divIcon({
-                    html: iconHtml,
-                    className: '',
-                    iconSize: [20, 20],
-                    iconAnchor: [10, 10]
-                });
-
-                const explosionMarker = L.marker([event.location.lat, event.location.lon], {
-                    icon,
-                    zIndexOffset: 9999 // Ensure it's on top
-                }).addTo(map);
-
-                // Remove the marker after the animation is complete
-                setTimeout(() => {
-                    explosionMarker.remove();
-                }, 800); // Must match CSS animation duration
+                const icon = L.divIcon({ html: iconHtml, className: '', iconSize: [20, 20], iconAnchor: [10, 10] });
+                const explosionMarker = L.marker([event.location.lat, event.location.lon], { icon, zIndexOffset: 9999 }).addTo(map);
+                setTimeout(() => { explosionMarker.remove(); }, 800); 
             }
         });
     }, [eliminationEvents]);
 
-    // C-UAS Visualization
+    // ... [C-UAS Visualization effect] ...
     useEffect(() => {
         const map = mapRef.current;
         if (!map || !counterUAS) return;
-
-        // Cleanup previous layers
-        if (uasLayersRef.current) {
-            uasLayersRef.current.clearLayers();
-        } else {
-            uasLayersRef.current = L.layerGroup().addTo(map);
-        }
-
-        // FIX: Explicitly type `system` to resolve type inference issue where it was typed as {}.
+        if (uasLayersRef.current) { uasLayersRef.current.clearLayers(); } else { uasLayersRef.current = L.layerGroup().addTo(map); }
         (Object.values(counterUAS) as CounterUASSystem[]).forEach((system: CounterUASSystem) => {
             const { location, detectionRadius, engagementRadius, status, currentTargetId } = system;
             const uasLatLng = [location.lat, location.lon];
-
-            // Turret Icon
             const turretIconHtml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-10 h-10 text-cyan-400"><path d="M12 2c-5.523 0-10 4.477-10 10s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"/><path d="M13 7h-2v4H7v2h4v4h2v-4h4v-2h-4z"/></svg>`;
             const turretIcon = L.divIcon({ html: turretIconHtml, className: '', iconSize: [40, 40], iconAnchor: [20, 20] });
             L.marker(uasLatLng, { icon: turretIcon, zIndexOffset: 3000 }).addTo(uasLayersRef.current).bindTooltip(`C-UAS Turret ${system.id.split('-')[0].toUpperCase()}`);
-            
-            // Detection Radius
-            L.circle(uasLatLng, {
-                radius: detectionRadius,
-                color: '#0891b2', // cyan-600
-                weight: 1,
-                dashArray: '5, 5',
-                fillOpacity: 0.05
-            }).addTo(uasLayersRef.current);
-
-            // Engagement Radius
-            L.circle(uasLatLng, {
-                radius: engagementRadius,
-                color: '#f59e0b', // amber-500
-                weight: 1,
-                fillOpacity: 0.1
-            }).addTo(uasLayersRef.current);
-
-            // Targeting Line
+            L.circle(uasLatLng, { radius: detectionRadius, color: '#0891b2', weight: 1, dashArray: '5, 5', fillOpacity: 0.05 }).addTo(uasLayersRef.current);
+            L.circle(uasLatLng, { radius: engagementRadius, color: '#f59e0b', weight: 1, fillOpacity: 0.1 }).addTo(uasLayersRef.current);
             if ((status === 'targeting' || status === 'engaging') && currentTargetId) {
                 const target = ufos.find(u => u.id === currentTargetId);
                 if (target) {
                     const targetLatLng = [target.location.lat, target.location.lon];
-                    const color = status === 'engaging' ? '#ef4444' : '#f59e0b'; // red-500 or amber-500
-                    L.polyline([uasLatLng, targetLatLng], {
-                        color: color,
-                        weight: status === 'engaging' ? 4 : 3,
-                        dashArray: status === 'targeting' ? '5, 10' : undefined,
-                        className: status === 'engaging' ? 'c-uas-engaging-line' : ''
-                    }).addTo(uasLayersRef.current);
+                    const color = status === 'engaging' ? '#ef4444' : '#f59e0b'; 
+                    L.polyline([uasLatLng, targetLatLng], { color: color, weight: status === 'engaging' ? 4 : 3, dashArray: status === 'targeting' ? '5, 10' : undefined, className: status === 'engaging' ? 'c-uas-engaging-line' : '' }).addTo(uasLayersRef.current);
                 }
             }
         });
     }, [counterUAS, ufos]);
 
-    // Replay Mode
+    // ... [Replay Mode effect] ...
     useEffect(() => {
         if (!mapRef.current) return;
         const map = mapRef.current;
-        
-        // Hide all regular drone markers and paths during replay
         Object.values(droneMarkersRef.current).forEach((marker: any) => marker.setOpacity(isReplayMode ? 0 : 1));
         Object.values(pathLayersRef.current).forEach((layer: any) => layer.setStyle({ opacity: isReplayMode ? 0 : 0.8 }));
-
         if (isReplayMode && replayDroneId && flightPaths[replayDroneId]) {
             const path = flightPaths[replayDroneId];
-            const drone = drones[replayDroneId]; // Get original drone info for type, etc.
+            const drone = drones[replayDroneId]; 
             if (!drone || path.length === 0) return;
-
-            // Show a static polyline for the entire path
             const latlngs = path.map(p => [p.lat, p.lon]);
             if (pathLayersRef.current['replay_path']) {
                 pathLayersRef.current['replay_path'].setLatLngs(latlngs);
             } else {
                 pathLayersRef.current['replay_path'] = L.polyline(latlngs, { color: '#6b7280', weight: 3, dashArray: '5, 5' }).addTo(map);
             }
-            
-            // Replay drone marker
             const point = path[replayProgressIndex];
             const nextPoint = path[replayProgressIndex + 1] || point;
             const heading = calculateBearing(point, nextPoint);
             const iconHtml = getDroneIconSVG(drone, true, heading);
             const icon = L.divIcon({ html: iconHtml, className: '', iconSize: [32, 32], iconAnchor: [16, 16] });
-
             if (replayDroneMarkerRef.current) {
                 replayDroneMarkerRef.current.setLatLng([point.lat, point.lon]).setIcon(icon);
             } else {
@@ -835,9 +670,7 @@ export const DroneMap: React.FC<DroneMapProps> = ({
             if (!isUserPanned) {
                 map.panTo([point.lat, point.lon]);
             }
-
         } else {
-            // Cleanup replay mode artifacts
             if (replayDroneMarkerRef.current) {
                 replayDroneMarkerRef.current.remove();
                 replayDroneMarkerRef.current = null;
@@ -849,12 +682,10 @@ export const DroneMap: React.FC<DroneMapProps> = ({
         }
     }, [isReplayMode, replayDroneId, replayProgressIndex, flightPaths, drones, isUserPanned]);
 
-    // Map Panning Logic
+    // ... [Map Panning Logic remains unchanged] ...
     useEffect(() => {
         if (!mapRef.current || isUserPanned || isReplayMode) return;
-        
         let target: Location | Omit<Location, 'alt'> | undefined;
-
         if (selectedDroneId && drones[selectedDroneId]) {
             target = drones[selectedDroneId].location;
         } else if (selectedAnomalyId) {
@@ -866,13 +697,11 @@ export const DroneMap: React.FC<DroneMapProps> = ({
         } else if (selectedGeofenceEventId) {
             target = geofenceEvents.find(e => e.id === selectedGeofenceEventId)?.location;
         }
-
         if (target) {
             mapRef.current.panTo([target.lat, target.lon]);
         }
     }, [selectedDroneId, selectedAnomalyId, selectedThreatId, selectedTargetDesignationId, selectedGeofenceEventId, drones, anomalies, threats, aiTargetDesignations, geofenceEvents, isUserPanned, isReplayMode]);
     
-    // Reset panning lock when selection is cleared
     useEffect(() => {
         if (!selectedDroneId && !selectedAnomalyId && !selectedThreatId && !selectedTargetDesignationId && !selectedGeofenceEventId) {
             setIsUserPanned(false);
@@ -880,7 +709,7 @@ export const DroneMap: React.FC<DroneMapProps> = ({
     }, [selectedDroneId, selectedAnomalyId, selectedThreatId, selectedTargetDesignationId, selectedGeofenceEventId]);
 
     return (
-         <div className="relative h-96 md:h-[450px] bg-gray-900 rounded-lg shadow-lg">
+         <div className="relative h-full min-h-[450px] bg-gray-900">
             <div ref={mapContainerRef} className="h-full w-full z-10" />
             {isUserPanned && (
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">

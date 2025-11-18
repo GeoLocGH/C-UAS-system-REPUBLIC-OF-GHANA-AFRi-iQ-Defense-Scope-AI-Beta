@@ -123,7 +123,6 @@ const AnomalyCard: React.FC<{ anomaly: Anomaly; onSelect: () => void; onRepair: 
 
 export const AnomalyFeed: React.FC<AnomalyFeedProps> = ({ anomalies, onSelectAnomaly, onInitiateRepair, selectedAnomalyId, droneNicknames }) => {
     const { t } = useTranslation();
-    const [isOpen, setIsOpen] = useState(true);
     const [activeFilter, setActiveFilter] = useState<AnomalySeverity | 'All'>('All');
 
     const getDroneDisplayName = (droneId: string) => {
@@ -152,58 +151,41 @@ export const AnomalyFeed: React.FC<AnomalyFeedProps> = ({ anomalies, onSelectAno
     }
 
     return (
-        <div className="bg-gray-800 rounded-lg shadow-lg p-6 mt-8">
-            <div className="flex justify-between items-center mb-4 cursor-pointer" onClick={() => setIsOpen(!isOpen)}>
-                 <div className="flex items-center gap-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-cyan-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 3.01-1.742 3.01H4.42c-1.53 0-2.493-1.676-1.743-3.01l5.58-9.92zM10 13a1 1 0 110-2 1 1 0 010 2zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    <h2 className="text-2xl font-semibold">{t('anomaly_feed.title')}</h2>
-                </div>
-                <button aria-expanded={isOpen}>
-                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 transition-transform transform ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                </button>
+        <div className="p-6">
+            <div className="flex items-center gap-2 mb-4">
+                <span className="text-sm font-medium text-gray-400">{t('anomaly_feed.filter_severity')}</span>
+                {severities.map(sev => (
+                    <button
+                        key={sev}
+                        onClick={() => setActiveFilter(sev)}
+                        className={`px-3 py-1 text-sm font-bold rounded-full transition ${
+                            activeFilter === sev 
+                                ? 'ring-2 ring-offset-2 ring-offset-gray-800 ring-white' 
+                                : 'opacity-70 hover:opacity-100'
+                        } ${sev === 'All' ? 'bg-gray-600 hover:bg-gray-700' : severityColors[sev]}`}
+                    >
+                        {sev === 'All' ? t('anomaly_feed.filter.all') : sev}
+                    </button>
+                ))}
             </div>
-            {isOpen && (
-                <div className="border-t border-gray-700 pt-4">
-                    <div className="flex items-center gap-2 mb-4">
-                        <span className="text-sm font-medium text-gray-400">{t('anomaly_feed.filter_severity')}</span>
-                        {severities.map(sev => (
-                            <button
-                                key={sev}
-                                onClick={() => setActiveFilter(sev)}
-                                className={`px-3 py-1 text-sm font-bold rounded-full transition ${
-                                    activeFilter === sev 
-                                        ? 'ring-2 ring-offset-2 ring-offset-gray-800 ring-white' 
-                                        : 'opacity-70 hover:opacity-100'
-                                } ${sev === 'All' ? 'bg-gray-600 hover:bg-gray-700' : severityColors[sev]}`}
-                            >
-                                {sev === 'All' ? t('anomaly_feed.filter.all') : sev}
-                            </button>
-                        ))}
+            <div className="overflow-y-auto max-h-96 pr-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredAnomalies.length > 0 ? (
+                    filteredAnomalies.map(anomaly => (
+                        <AnomalyCard 
+                            key={anomaly.id} 
+                            anomaly={anomaly} 
+                            onSelect={() => onSelectAnomaly(anomaly.id)} 
+                            onRepair={() => onInitiateRepair(anomaly.id)}
+                            isSelected={anomaly.id === selectedAnomalyId}
+                            droneDisplayName={getDroneDisplayName(anomaly.droneId)}
+                        />
+                    ))
+                ) : (
+                    <div className="col-span-full text-center py-8 text-gray-500">
+                        <p>{t('anomaly_feed.no_anomalies')}</p>
                     </div>
-                    <div className="overflow-y-auto max-h-96 pr-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {filteredAnomalies.length > 0 ? (
-                            filteredAnomalies.map(anomaly => (
-                                <AnomalyCard 
-                                    key={anomaly.id} 
-                                    anomaly={anomaly} 
-                                    onSelect={() => onSelectAnomaly(anomaly.id)} 
-                                    onRepair={() => onInitiateRepair(anomaly.id)}
-                                    isSelected={anomaly.id === selectedAnomalyId}
-                                    droneDisplayName={getDroneDisplayName(anomaly.droneId)}
-                                />
-                            ))
-                        ) : (
-                            <div className="col-span-full text-center py-8 text-gray-500">
-                                <p>{t('anomaly_feed.no_anomalies')}</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 };

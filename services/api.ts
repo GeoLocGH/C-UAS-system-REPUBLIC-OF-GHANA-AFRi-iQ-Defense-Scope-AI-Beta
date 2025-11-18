@@ -930,20 +930,46 @@ function updateDronePhysicsAndState(id: string, drone: Drone) {
                     return; // Stop processing this drone
                 }
 
-                // Kamikaze: Move directly towards the target's CURRENT location with high speed
-                const target = targetObject.location;
-                const angle = Math.atan2(target.lat - drone.location.lat, target.lon - drone.location.lon);
-                
-                // --- FIX: Use stepDistance for movement to prevent overshooting ---
-                const stepLat = Math.sin(angle) * (stepDistance / 111139);
-                const stepLon = Math.cos(angle) * (stepDistance / (111139 * Math.cos(drone.location.lat * Math.PI / 180)));
-                drone.location.lat += stepLat;
-                drone.location.lon += stepLon;
+                // --- ENHANCED PREDICTIVE INTERCEPTION LOGIC ---
+                // Factor in target speed and altitude for 3D vector engagement
 
-                if (Math.abs(drone.location.alt - target.alt) > altitudeChangeRateInterceptor) {
-                    drone.location.alt += Math.sign(target.alt - drone.location.alt) * altitudeChangeRateInterceptor;
-                } else {
-                    drone.location.alt = target.alt;
+                const targetSpeedMps = (targetObject.speed || 0) * 0.277778; // km/h to m/s
+                const targetHeadingRad = (targetObject.heading || 0) * (Math.PI / 180);
+                
+                // Simple time-to-intercept prediction
+                // We cap prediction time to prevent extreme leading at long ranges
+                const timeToIntercept = distanceToTarget / kamikazeSpeedMps;
+                const predictionTime = Math.min(timeToIntercept, 3.5); 
+
+                // Calculate Target Displacement
+                const metersPerDegLat = 111139;
+                const metersPerDegLon = 111139 * Math.cos(drone.location.lat * (Math.PI / 180));
+                
+                const vTargetNorth = targetSpeedMps * Math.cos(targetHeadingRad);
+                const vTargetEast = targetSpeedMps * Math.sin(targetHeadingRad);
+
+                const predictedLat = targetObject.location.lat + (vTargetNorth * predictionTime) / metersPerDegLat;
+                const predictedLon = targetObject.location.lon + (vTargetEast * predictionTime) / metersPerDegLon;
+                const predictedAlt = targetObject.location.alt; // Target altitude is the goal
+
+                // Calculate 3D Vector to Predicted Impact Point
+                const dyMeters = (predictedLat - drone.location.lat) * metersPerDegLat;
+                const dxMeters = (predictedLon - drone.location.lon) * metersPerDegLon;
+                const dzMeters = predictedAlt - drone.location.alt;
+
+                const vectorMag = Math.sqrt(dxMeters*dxMeters + dyMeters*dyMeters + dzMeters*dzMeters);
+
+                if (vectorMag > 0) {
+                    // Normalize and scale by drone's step distance
+                    const moveRatio = stepDistance / vectorMag;
+                    
+                    const moveY = dyMeters * moveRatio;
+                    const moveX = dxMeters * moveRatio;
+                    const moveZ = dzMeters * moveRatio;
+
+                    drone.location.lat += moveY / metersPerDegLat;
+                    drone.location.lon += moveX / metersPerDegLon;
+                    drone.location.alt += moveZ;
                 }
 
             } else {

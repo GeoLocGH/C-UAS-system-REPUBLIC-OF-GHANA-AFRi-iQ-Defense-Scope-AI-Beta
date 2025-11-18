@@ -64,15 +64,13 @@ export const FleetControls: React.FC<FleetControlsProps> = ({
 
 
     return (
-        <div className="bg-gray-800 rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-semibold mb-4 border-b border-gray-700 pb-2">{t('fleet_controls.title')}</h2>
+        <div className="p-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <button onClick={() => onFleetCommand('launch')} className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105">{t('fleet_controls.launch_all')}</button>
                 <button onClick={() => onFleetCommand('land')} className="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105">{t('fleet_controls.land_all')}</button>
                 <button onClick={() => onFleetCommand('return_to_base')} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105">{t('fleet_controls.return_all')}</button>
                 <button onClick={onShowMissionModal} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105">{t('fleet_controls.set_fleet_mission')}</button>
             </div>
-
             
             {selectedDrone && (
                 <div className="mt-6 pt-4 border-t border-gray-700 transition-opacity duration-300">

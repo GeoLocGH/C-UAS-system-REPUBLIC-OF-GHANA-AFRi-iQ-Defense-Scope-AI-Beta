@@ -109,14 +109,7 @@ export const AITargetDesignations: React.FC<AITargetDesignationsProps> = ({ desi
     }
     
     return (
-        <div className="bg-gray-800 rounded-lg shadow-lg p-6 mb-8 border-t-4 border-cyan-500">
-            <h2 className="text-2xl font-semibold flex items-center gap-3 mb-4">
-                 <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-cyan-400 animate-pulse" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M10 3.5a.5.5 0 01.5.5v2a.5.5 0 01-1 0v-2a.5.5 0 01.5-.5zM3.5 10a.5.5 0 01.5-.5h2a.5.5 0 010 1h-2a.5.5 0 01-.5-.5zM10 16.5a.5.5 0 01-.5-.5v-2a.5.5 0 011 0v2a.5.5 0 01-.5.5zM16.5 10a.5.5 0 01-.5.5h-2a.5.5 0 010-1h2a.5.5 0 01.5.5z" />
-                    <path d="M10 6a4 4 0 100 8 4 4 0 000-8zM6 10a4 4 0 118 0 4 4 0 01-8 0z" />
-                </svg>
-                {t('ai_targets.title', { count: designations.length })}
-            </h2>
+        <div className="p-6">
             <div className="space-y-4">
                 {designations.map(designation => (
                     <TargetCard

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { DroneCard } from './DroneCard';
 import { Drone, Drones, DroneStatus, FlightPaths, DroneNicknames, Threat, UnidentifiedFlyingObject } from '../types';
@@ -48,7 +47,7 @@ export const DroneFleet: React.FC<DroneFleetProps> = ({
     highSeverityCounts, 
     healthScores, 
     flightPaths,
-    droneNicknames,
+    droneNicknames, 
     onSetNickname,
     onGroupCommand,
     threats,
@@ -94,7 +93,7 @@ export const DroneFleet: React.FC<DroneFleetProps> = ({
     
     if (error) {
         return (
-            <div className="bg-gray-800 rounded-lg shadow-lg p-6 my-8">
+            <div className="p-6">
                 <div className="text-center text-red-400 bg-red-900 bg-opacity-50 p-6 rounded-lg">
                     <h3 className="font-bold text-xl">{t('drone_fleet.connection_error.title')}</h3>
                     <p>{error}</p>
@@ -105,7 +104,7 @@ export const DroneFleet: React.FC<DroneFleetProps> = ({
     
     if (Object.keys(drones).length === 0 && !error) {
         return (
-             <div className="bg-gray-800 rounded-lg shadow-lg p-6 my-8">
+             <div className="p-6">
                 <div className="text-center text-gray-500 p-6">
                     <h3 className="font-bold text-xl">{t('drone_fleet.awaiting_signals.title')}</h3>
                     <p>{t('drone_fleet.awaiting_signals.body')}</p>
@@ -126,15 +125,15 @@ export const DroneFleet: React.FC<DroneFleetProps> = ({
     const onMissionDrones = groupedDrones.onMission;
 
     return (
-        <div id="drone-fleet-groups">
+        <div id="drone-fleet-groups" className="p-6 space-y-6">
             {onMissionDrones.length > 0 && (
-                <div className="mb-6 bg-gray-800 rounded-lg shadow-lg">
-                    <div className="bg-purple-900/50 rounded-t-lg p-3 flex justify-between items-center">
+                <div className="rounded-lg border border-gray-700 bg-gray-900/50 overflow-hidden">
+                    <div className="bg-purple-900/50 p-3 flex justify-between items-center border-b border-gray-700">
                         <div className="flex items-center gap-3">
-                            <h3 className="text-xl font-semibold text-purple-300">{t('drone_fleet.on_mission')} ({onMissionDrones.length})</h3>
+                            <h3 className="text-lg font-semibold text-purple-300">{t('drone_fleet.on_mission')} ({onMissionDrones.length})</h3>
                         </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
                         {onMissionDrones.map(({ id, drone }) => (
                             <DroneCard 
                                 key={id}
@@ -170,26 +169,26 @@ export const DroneFleet: React.FC<DroneFleetProps> = ({
                 const canReturn = returnableDronesInGroup.length > 0;
                 
                 return (
-                    <div key={type} className="mb-6 bg-gray-800 rounded-lg shadow-lg">
+                    <div key={type} className="rounded-lg border border-gray-700 bg-gray-900/50 overflow-hidden">
                         <div 
-                            className="bg-gray-700 rounded-t-lg p-3 flex justify-between items-center cursor-pointer"
+                            className="bg-gray-800/80 p-3 flex justify-between items-center cursor-pointer hover:bg-gray-700/50 transition border-b border-gray-700"
                             onClick={() => toggleGroup(type)}
                         >
                             <div className="flex items-center gap-3">
-                                <h3 className="text-xl font-semibold">{groupName} ({dronesInGroup.length})</h3>
+                                <h3 className="text-lg font-semibold">{groupName} ({dronesInGroup.length})</h3>
                                 <button>
-                                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 transition-transform transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 transition-transform transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                     </svg>
                                 </button>
                             </div>
                             <div className="flex items-center gap-2">
-                                {canLaunch && <button onClick={(e) => { e.stopPropagation(); onGroupCommand(groundedDronesInGroup.map(d => d.id), 'launch'); }} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-lg text-xs transition">{t('drone_fleet.launch_group')}</button>}
-                                {canReturn && <button onClick={(e) => { e.stopPropagation(); onGroupCommand(returnableDronesInGroup.map(d => d.id), 'return_to_base'); }} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-lg text-xs transition">{t('drone_fleet.return_group')}</button>}
+                                {canLaunch && <button onClick={(e) => { e.stopPropagation(); onGroupCommand(groundedDronesInGroup.map(d => d.id), 'launch'); }} className="bg-green-600 hover:bg-green-700 text-white font-bold py-1.5 px-3 rounded text-xs transition">{t('drone_fleet.launch_group')}</button>}
+                                {canReturn && <button onClick={(e) => { e.stopPropagation(); onGroupCommand(returnableDronesInGroup.map(d => d.id), 'return_to_base'); }} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1.5 px-3 rounded text-xs transition">{t('drone_fleet.return_group')}</button>}
                             </div>
                         </div>
                         {isExpanded && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
                                 {dronesInGroup.sort((a,b) => a.id.localeCompare(b.id)).map(({ id, drone }) => (
                                     <DroneCard 
                                         key={id}

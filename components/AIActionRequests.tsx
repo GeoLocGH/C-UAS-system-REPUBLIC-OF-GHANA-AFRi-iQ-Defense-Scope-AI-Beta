@@ -1,5 +1,3 @@
-
-
 import React, { useState } from 'react';
 import { AIAction, type AIActionRequest, AIPriority } from '../types';
 import { useTranslation } from '../contexts/I18nContext';
@@ -179,14 +177,8 @@ export const AIActionRequests: React.FC<AIActionRequestsProps> = ({ requests, on
     }
 
     return (
-        <div className="bg-gray-800 rounded-lg shadow-lg p-6 mb-8 border-t-4 border-amber-500">
+        <div className="p-6">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-4">
-                 <h2 className="text-2xl font-semibold flex items-center gap-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-amber-500 animate-pulse" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
-                    </svg>
-                    {t('ai_requests.title', { count: requests.length })}
-                </h2>
                 <div className="flex items-center gap-2 flex-wrap">
                     {allFilters.map(({ id, label }) => (
                          <button

@@ -99,7 +99,6 @@ const ThreatCard: React.FC<{ threat: Threat; onSelect: () => void; isSelected: b
 
 export const ThreatFeed: React.FC<ThreatFeedProps> = ({ threats, onSelectThreat, selectedThreatId, onRespondToThreat }) => {
     const { t } = useTranslation();
-    const [isOpen, setIsOpen] = useState(true);
 
     const sortedThreats = useMemo(() => {
         const severityOrder: Record<ThreatSeverity, number> = { Critical: 1, High: 2, Medium: 3 };
@@ -116,36 +115,18 @@ export const ThreatFeed: React.FC<ThreatFeedProps> = ({ threats, onSelectThreat,
     }
 
     return (
-        <div className="bg-gray-800 rounded-lg shadow-lg p-6 mt-8">
-            <div className="flex justify-between items-center mb-4 cursor-pointer" onClick={() => setIsOpen(!isOpen)}>
-                <div className="flex items-center gap-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-400 animate-pulse" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 1a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 1zM5.05 3.95a.75.75 0 011.06 0l1.062 1.062a.75.75 0 01-1.06 1.06L5.05 5.012a.75.75 0 010-1.062zM3 10a.75.75 0 01.75-.75h1.5a.75.75 0 010 1.5h-1.5A.75.75 0 013 10zm11.95 6.05a.75.75 0 01-1.06 0l-1.062-1.062a.75.75 0 011.06-1.06l1.06 1.06a.75.75 0 010 1.062zM17 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5a.75.75 0 01.75.75zm-5.05 3.95a.75.75 0 010-1.06l1.06-1.062a.75.75 0 011.06 1.06L13.012 14.95a.75.75 0 01-1.06 0zM10 17a.75.75 0 01-.75.75v1.5a.75.75 0 011.5 0v-1.5a.75.75 0 01-.75-.75zM5.05 16.05a.75.75 0 010-1.06l1.06-1.062a.75.75 0 011.06 1.06L6.112 14.95a.75.75 0 01-1.06 0z" clipRule="evenodd" />
-                      <path d="M10 4.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM10 14a4 4 0 110-8 4 4 0 010 8z" />
-                    </svg>
-                    <h2 className="text-2xl font-semibold">{t('threat_feed.title', { count: threats.length })}</h2>
-                </div>
-                <button aria-expanded={isOpen}>
-                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 transition-transform transform ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                </button>
+        <div className="p-6">
+            <div className="overflow-y-auto max-h-96 pr-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {sortedThreats.map(threat => (
+                    <ThreatCard
+                        key={threat.id}
+                        threat={threat}
+                        onSelect={() => onSelectThreat(threat.id)}
+                        isSelected={threat.id === selectedThreatId}
+                        onRespond={() => onRespondToThreat(threat.id)}
+                    />
+                ))}
             </div>
-            {isOpen && (
-                <div className="border-t border-gray-700 pt-4">
-                    <div className="overflow-y-auto max-h-96 pr-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {sortedThreats.map(threat => (
-                            <ThreatCard
-                                key={threat.id}
-                                threat={threat}
-                                onSelect={() => onSelectThreat(threat.id)}
-                                isSelected={threat.id === selectedThreatId}
-                                onRespond={() => onRespondToThreat(threat.id)}
-                            />
-                        ))}
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

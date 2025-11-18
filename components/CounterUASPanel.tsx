@@ -25,8 +25,6 @@ export const CounterUASPanel: React.FC<CounterUASPanelProps> = ({ system, onCeas
     }
 
     const statusStyle = statusColors[system.status] || statusColors.disabled;
-    const systemName = system.id.split('-')[0].toUpperCase();
-
     const threatPercent = system.currentTargetInfo ? Math.min(100, (system.currentTargetInfo.threatScore / 4.0) * 100) : 0;
     const getThreatBarColor = () => {
         if (threatPercent > 75) return 'bg-red-500';
@@ -35,8 +33,7 @@ export const CounterUASPanel: React.FC<CounterUASPanelProps> = ({ system, onCeas
     };
 
     return (
-        <div className="bg-gray-800 rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-semibold mb-4 border-b border-gray-700 pb-2">{t('counter_uas.title_id', { id: systemName })}</h2>
+        <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
                 
                 {/* Status Section */}

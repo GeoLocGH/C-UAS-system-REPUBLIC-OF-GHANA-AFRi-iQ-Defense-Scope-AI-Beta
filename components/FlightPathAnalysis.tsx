@@ -27,13 +27,7 @@ export const FlightPathAnalysis: React.FC<FlightPathAnalysisProps> = ({ suggesti
     }
 
     return (
-        <div className="bg-gray-800 rounded-lg shadow-lg p-6 mb-8 border-t-4 border-blue-500">
-            <h2 className="text-2xl font-semibold flex items-center gap-3 mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-                </svg>
-                {t('path_intelligence.title', { count: suggestions.length })}
-            </h2>
+        <div className="p-6">
             <div className="space-y-4">
                 {suggestions.map(suggestion => (
                     <div key={suggestion.id} className="bg-gray-900 p-4 rounded-lg flex flex-col md:flex-row items-center justify-between gap-4 shadow-md">
