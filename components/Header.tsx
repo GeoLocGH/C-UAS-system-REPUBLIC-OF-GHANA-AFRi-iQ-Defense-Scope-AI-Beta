@@ -2,6 +2,7 @@
 
 
 
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from '../contexts/I18nContext';
 import { WeatherWidget } from './WeatherWidget';
@@ -50,6 +51,7 @@ const LanguageSelector: React.FC = () => {
         { code: 'fr', name: t('settings.language.fr') },
         { code: 'zh', name: t('settings.language.zh') },
         { code: 'ru', name: t('settings.language.ru') },
+        { code: 'uk', name: t('settings.language.uk') },
     ];
 
     useEffect(() => {

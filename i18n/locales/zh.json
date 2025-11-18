@@ -198,6 +198,7 @@
   "settings.language.fr": "法语",
   "settings.language.zh": "中文",
   "settings.language.ru": "俄语",
+  "settings.language.uk": "乌克兰语",
   "alerts.connection_lost": "与无人机机队的连接已断开。",
   "alerts.low_battery": "警告：{{droneName}} 电池电量低，为 {{battery}}%。",
   "alerts.mission_start": "{{droneName}} 已开始其任务。",

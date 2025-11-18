@@ -198,6 +198,7 @@
   "settings.language.fr": "Français",
   "settings.language.zh": "中文",
   "settings.language.ru": "Русский",
+  "settings.language.uk": "Украинский",
   "alerts.connection_lost": "Связь с флотом дронов потеряна.",
   "alerts.low_battery": "Внимание: батарея дрона {{droneName}} низкая, {{battery}} процентов.",
   "alerts.mission_start": "Дрон {{droneName}} начал миссию.",
